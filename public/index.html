@@ -1,116 +1,132 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeto 2D Interativo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-100 font-sans overflow-hidden">
+<body class="bg-gray-800 text-white font-sans overflow-hidden">
 
-    <!-- Cena Principal -->
-    <div id="scene" class="w-screen h-screen relative cursor-default">
-        <!-- Objetos 2D serão adicionados aqui via JavaScript -->
-    </div>
-
-    <!-- Interface do Usuário (UI) -->
-    <div class="absolute top-4 left-4 flex flex-col gap-2">
-        <div class="flex gap-2">
-            <button id="add-rect-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-all">
-                Adicionar Retângulo
-            </button>
-            <button id="add-slider-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition-all">
-                Adicionar Slider
-            </button>
+    <div id="scene-container" class="relative w-screen h-screen">
+        <div id="scene" class="w-full h-full bg-gray-700 relative overflow-hidden">
+            <!-- Objetos 2D serão adicionados aqui via JS -->
         </div>
-        <div id="coords" class="bg-white p-3 rounded-lg shadow-md text-gray-700 min-w-[200px]">Coordenadas (X, Y): ...</div>
+
+        <!-- Controles da UI -->
+        <div id="ui-controls" class="absolute top-4 left-4 flex flex-col space-y-2">
+            <div class="flex space-x-2">
+                <button id="add-rect-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md transition-colors font-semibold">
+                    Adicionar Retângulo
+                </button>
+                <button id="add-circle-btn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg shadow-md transition-colors font-semibold">
+                    Adicionar Círculo
+                </button>
+                <button id="add-slider-btn" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg shadow-md transition-colors font-semibold">
+                    Adicionar Slider
+                </button>
+            </div>
+            <div id="coords" class="bg-gray-900 bg-opacity-70 text-sm rounded-lg px-3 py-2 shadow-lg">
+                Coordenadas (X, Y): ...
+            </div>
+        </div>
     </div>
 
-    <!-- Formulário Modal (inicialmente oculto) -->
-    <div id="form-container" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
-            <h2 id="form-title" class="text-2xl font-bold mb-4 text-gray-800">Configurar Objeto</h2>
-            
+    <!-- Formulário Modal -->
+    <div id="form-container" class="hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-700">
+            <h2 id="form-title" class="text-2xl font-bold mb-4">Configurar Objeto</h2>
             <form id="object-form" class="space-y-4">
                 <input type="hidden" id="object-id">
                 <input type="hidden" id="object-type">
 
                 <!-- Campos Comuns -->
                 <div>
-                    <label for="object-name" class="block text-sm font-medium text-gray-700">Nome</label>
-                    <input type="text" id="object-name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="object-name" class="block text-sm font-medium text-gray-400">Nome</label>
+                    <input type="text" id="object-name" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 </div>
-                 <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="x" class="block text-sm font-medium text-gray-700">Posição X</label>
-                        <input type="number" id="x" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                        <label for="x" class="block text-sm font-medium text-gray-400">Posição X</label>
+                        <input type="number" id="x" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                     </div>
                     <div>
-                        <label for="y" class="block text-sm font-medium text-gray-700">Posição Y</label>
-                        <input type="number" id="y" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                        <label for="y" class="block text-sm font-medium text-gray-400">Posição Y</label>
+                        <input type="number" id="y" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                     </div>
                 </div>
 
-                <!-- Campos Específicos do Retângulo -->
-                <div id="rect-fields" class="space-y-4">
+                <!-- Campos do Retângulo -->
+                <div id="rect-fields" class="hidden space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="largura" class="block text-sm font-medium text-gray-700">Largura</label>
-                            <input type="number" id="largura" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            <label for="largura" class="block text-sm font-medium text-gray-400">Largura (px)</label>
+                            <input type="number" id="largura" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                         </div>
                         <div>
-                            <label for="altura" class="block text-sm font-medium text-gray-700">Altura</label>
-                            <input type="number" id="altura" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            <label for="altura" class="block text-sm font-medium text-gray-400">Altura (px)</label>
+                            <input type="number" id="altura" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                         </div>
                     </div>
                      <div>
-                        <label for="rotation" class="block text-sm font-medium text-gray-700">Rotação (graus)</label>
-                        <input type="number" id="rotation" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                        <label for="rotation" class="block text-sm font-medium text-gray-400">Rotação (°)</label>
+                        <input type="number" step="any" id="rotation" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                </div>
+                
+                <!-- Campos do Círculo -->
+                <div id="circle-fields" class="hidden space-y-4">
+                     <div>
+                        <label for="diametro" class="block text-sm font-medium text-gray-400">Diâmetro (px)</label>
+                        <input type="number" id="diametro" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                    </div>
+                </div>
+
+                <!-- Campos compartilhados por Retângulo e Círculo -->
+                 <div id="shape-common-fields" class="hidden space-y-4">
+                     <div class="grid grid-cols-2 gap-4">
                          <div>
-                            <label for="cor" class="block text-sm font-medium text-gray-700">Cor Padrão (RGBA)</label>
-                            <input type="text" id="cor" value="rgba(139, 92, 246, 1)" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-                        </div>
-                        <div>
-                            <label for="cor-colisao" class="block text-sm font-medium text-gray-700">Cor em Colisão (RGBA)</label>
-                            <input type="text" id="cor-colisao" value="rgba(251, 146, 60, 1)" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-                        </div>
-                    </div>
-                    <div class="flex items-center">
-                        <input id="reacts-to-collision" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                        <label for="reacts-to-collision" class="ml-2 block text-sm text-gray-900">Reage à colisão</label>
-                    </div>
-                </div>
+                             <label for="cor" class="block text-sm font-medium text-gray-400">Cor (RGBA)</label>
+                             <input type="text" id="cor" value="rgba(59, 130, 246, 1)" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                         </div>
+                         <div>
+                             <label for="cor-colisao" class="block text-sm font-medium text-gray-400">Cor Colisão (RGBA)</label>
+                             <input type="text" id="cor-colisao" value="rgba(239, 68, 68, 1)" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                         </div>
+                     </div>
+                     <div class="flex items-center">
+                         <input type="checkbox" id="reacts-to-collision" class="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                         <label for="reacts-to-collision" class="ml-2 block text-sm">Reage à colisão</label>
+                     </div>
+                 </div>
 
-                <!-- Campos Específicos do Slider -->
-                <div id="slider-fields" class="space-y-4">
+                <!-- Campos do Slider -->
+                <div id="slider-fields" class="hidden space-y-4">
                     <div>
-                        <label for="target-object" class="block text-sm font-medium text-gray-700">Objeto Alvo</label>
-                        <select id="target-object" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3"></select>
+                        <label for="target-object" class="block text-sm font-medium text-gray-400">Objeto Alvo</label>
+                        <select id="target-object" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3"></select>
                     </div>
-                     <div>
-                        <label for="target-property" class="block text-sm font-medium text-gray-700">Propriedade Alvo</label>
-                        <select id="target-property" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                    <div>
+                        <label for="target-property" class="block text-sm font-medium text-gray-400">Propriedade Alvo</label>
+                        <select id="target-property" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                             <option value="x">Posição X</option>
                             <option value="y">Posição Y</option>
                             <option value="largura">Largura</option>
                             <option value="altura">Altura</option>
+                             <option value="diametro">Diâmetro</option>
                             <option value="rotation">Rotação</option>
                         </select>
                     </div>
-                     <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="min-value" class="block text-sm font-medium text-gray-700">Valor Mínimo</label>
-                            <input type="number" id="min-value" value="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            <label for="min-value" class="block text-sm font-medium text-gray-400">Valor Mínimo</label>
+                            <input type="number" id="min-value" value="0" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                         </div>
                         <div>
-                            <label for="max-value" class="block text-sm font-medium text-gray-700">Valor Máximo</label>
-                            <input type="number" id="max-value" value="500" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+                            <label for="max-value" class="block text-sm font-medium text-gray-400">Valor Máximo</label>
+                            <input type="number" id="max-value" value="500" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                         </div>
                     </div>
                 </div>
@@ -118,19 +134,19 @@
                 <!-- Botões de Ação -->
                 <div class="flex justify-between items-center pt-4">
                     <div>
-                        <button type="button" id="delete-btn" class="hidden bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-all">Excluir</button>
-                        <button type="button" id="duplicate-btn" class="hidden bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-all ml-2">Duplicar</button>
+                        <button type="button" id="delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md font-medium">Excluir</button>
+                        <button type="button" id="duplicate-btn" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-gray-900 rounded-md font-medium ml-2">Duplicar</button>
                     </div>
-                    <div class="flex gap-2">
-                        <button type="button" id="cancel-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-400 transition-all">Cancelar</button>
-                        <button type="submit" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all">Salvar</button>
+                    <div>
+                        <button type="button" id="cancel-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md font-medium mr-2">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium">Salvar</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
-    
-    <script type="module" src="js/main.js?v=0.0.1"></script>
+
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
 
