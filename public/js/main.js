@@ -1,4 +1,5 @@
 import Retangulo from './objects/Retangulo.js';
+import Slider from './objects/Slider.js';
 
 // --- CONFIGURAÇÃO INICIAL ---
 const scene = document.getElementById('scene');
@@ -9,15 +10,20 @@ const formContainer = document.getElementById('form-container');
 const objectForm = document.getElementById('object-form');
 const formTitle = document.getElementById('form-title');
 const addRectBtn = document.getElementById('add-rect-btn');
+const addSliderBtn = document.getElementById('add-slider-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const deleteBtn = document.getElementById('delete-btn');
 const duplicateBtn = document.getElementById('duplicate-btn');
 const objectIdInput = document.getElementById('object-id');
+const objectTypeInput = document.getElementById('object-type');
+const rectFields = document.getElementById('rect-fields');
+const sliderFields = document.getElementById('slider-fields');
+
 
 // --- ESTADO DA APLICAÇÃO ---
 let isCollisionDetectionActive = true;
 const allObjects = []; // Array para armazenar as instâncias dos objetos
-const STORAGE_KEY = 'interactive_2d_objects_v4'; // Chave atualizada para nova estrutura
+const STORAGE_KEY = 'interactive_2d_objects_v5'; // Chave atualizada para nova estrutura
 
 /**
  * Lê os dados dos objetos do localStorage.
@@ -40,6 +46,7 @@ function saveObjectsToStorage(objectsData) {
  * Verifica a colisão entre dois objetos (AABB).
  */
 function checkAABBCollision(objA, objB) {
+    if (objA.type === 'slider' || objB.type === 'slider') return false; // Sliders não colidem
     return (
         objA.x < objB.x + objB.largura &&
         objA.x + objA.largura > objB.x &&
@@ -52,83 +59,139 @@ function checkAABBCollision(objA, objB) {
  * Loop principal da aplicação.
  */
 function gameLoop() {
-    if (isCollisionDetectionActive) {
-        allObjects.forEach(obj => { obj.isColliding = false; });
+    // Filtra apenas objetos que podem colidir
+    const collidableObjects = allObjects.filter(obj => obj.type === 'retangulo');
 
-        for (let i = 0; i < allObjects.length; i++) {
-            for (let j = i + 1; j < allObjects.length; j++) {
-                const objA = allObjects[i];
-                const objB = allObjects[j];
+    if (isCollisionDetectionActive) {
+        collidableObjects.forEach(obj => { obj.isColliding = false; });
+
+        for (let i = 0; i < collidableObjects.length; i++) {
+            for (let j = i + 1; j < collidableObjects.length; j++) {
+                const objA = collidableObjects[i];
+                const objB = collidableObjects[j];
 
                 if (checkAABBCollision(objA, objB)) {
-                    if (objA.reactsToCollision) {
-                        objA.isColliding = true;
-                    }
-                    if (objB.reactsToCollision) {
-                        objB.isColliding = true;
-                    }
+                    if (objA.reactsToCollision) objA.isColliding = true;
+                    if (objB.reactsToCollision) objB.isColliding = true;
                 }
             }
         }
-        allObjects.forEach(obj => { obj.updateAppearance(); });
+        collidableObjects.forEach(obj => { obj.updateAppearance(); });
     }
     requestAnimationFrame(gameLoop);
 }
 
 // --- LÓGICA DO FORMULÁRIO ---
 
-function openForm(config = null) {
+function populateTargetObjectDropdown(currentId) {
+    const targetObjectSelect = document.getElementById('target-object');
+    targetObjectSelect.innerHTML = ''; // Limpa opções existentes
+    
+    const objectsData = loadObjectsFromStorage();
+    const availableTargets = objectsData.filter(obj => obj.type === 'retangulo');
+
+    availableTargets.forEach(target => {
+        const option = document.createElement('option');
+        option.value = target.id;
+        option.textContent = `${target.nome} (${target.id})`;
+        if (target.id === currentId) {
+            option.selected = true;
+        }
+        targetObjectSelect.appendChild(option);
+    });
+}
+
+
+function openForm(config = null, type) {
     objectForm.reset();
+    objectTypeInput.value = type;
+
+    // Esconde todas as seções de campos específicos
+    rectFields.classList.add('hidden');
+    sliderFields.classList.add('hidden');
+
     if (config) { // Modo Edição
-        formTitle.textContent = 'Editar Retângulo';
-        objectIdInput.value = config.id; // ID estável
-        document.getElementById('object-name').value = config.nome; // Nome personalizável
-        document.getElementById('largura').value = config.largura;
-        document.getElementById('altura').value = config.altura;
+        formTitle.textContent = `Editar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        objectIdInput.value = config.id;
+        document.getElementById('object-name').value = config.nome;
         document.getElementById('x').value = Math.round(config.x);
         document.getElementById('y').value = Math.round(config.y);
-        document.getElementById('rotation').value = config.rotation * (180 / Math.PI);
-        document.getElementById('cor').value = config.collisionHandlers.onNoCollision.cor;
-        document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
-        document.getElementById('reacts-to-collision').checked = config.reactsToCollision;
         deleteBtn.classList.remove('hidden');
         duplicateBtn.classList.remove('hidden');
     } else { // Modo Criação
-        formTitle.textContent = 'Adicionar Novo Retângulo';
-        objectIdInput.value = `rect_${Date.now()}`; // Gera um novo ID estável
-        document.getElementById('object-name').value = 'Novo Retângulo'; // Nome padrão
-        document.getElementById('largura').value = 100;
-        document.getElementById('altura').value = 50;
+        formTitle.textContent = `Adicionar Novo ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        objectIdInput.value = `${type}_${Date.now()}`;
         document.getElementById('x').value = 50;
         document.getElementById('y').value = 50;
-        document.getElementById('cor').value = 'rgba(139, 92, 246, 1)'; 
-        document.getElementById('cor-colisao').value = 'rgba(251, 146, 60, 1)';
-        document.getElementById('reacts-to-collision').checked = true;
         deleteBtn.classList.add('hidden');
         duplicateBtn.classList.add('hidden');
     }
+
+    if (type === 'retangulo') {
+        rectFields.classList.remove('hidden');
+        if (config) {
+            document.getElementById('largura').value = config.largura;
+            document.getElementById('altura').value = config.altura;
+            document.getElementById('rotation').value = (config.rotation || 0) * (180 / Math.PI);
+            document.getElementById('cor').value = config.collisionHandlers.onNoCollision.cor;
+            document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
+            document.getElementById('reacts-to-collision').checked = config.reactsToCollision;
+        } else {
+             document.getElementById('object-name').value = 'Novo Retângulo';
+        }
+    } else if (type === 'slider') {
+        sliderFields.classList.remove('hidden');
+        populateTargetObjectDropdown(config ? config.targetId : null);
+        if (config) {
+            document.getElementById('target-property').value = config.targetProperty;
+            document.getElementById('min-value').value = config.min;
+            document.getElementById('max-value').value = config.max;
+        } else {
+            document.getElementById('object-name').value = 'Novo Slider';
+        }
+    }
+
     formContainer.classList.remove('hidden');
 }
+
 
 function closeForm() {
     formContainer.classList.add('hidden');
 }
 
 function getConfigFromForm() {
-    return {
-        id: objectIdInput.value, // O ID vem do campo oculto e não muda
-        nome: document.getElementById('object-name').value.trim(), // O nome vem do campo de texto
+    const type = objectTypeInput.value;
+    const commonConfig = {
+        id: objectIdInput.value,
+        type: type,
+        nome: document.getElementById('object-name').value.trim(),
         x: parseInt(document.getElementById('x').value, 10),
         y: parseInt(document.getElementById('y').value, 10),
-        largura: parseInt(document.getElementById('largura').value, 10),
-        altura: parseInt(document.getElementById('altura').value, 10),
-        rotation: parseFloat(document.getElementById('rotation').value) * (Math.PI / 180),
-        reactsToCollision: document.getElementById('reacts-to-collision').checked,
-        collisionHandlers: {
-            onCollision: { cor: document.getElementById('cor-colisao').value },
-            onNoCollision: { cor: document.getElementById('cor').value }
-        }
     };
+
+    if (type === 'retangulo') {
+        return {
+            ...commonConfig,
+            largura: parseInt(document.getElementById('largura').value, 10),
+            altura: parseInt(document.getElementById('altura').value, 10),
+            rotation: parseFloat(document.getElementById('rotation').value) * (Math.PI / 180),
+            reactsToCollision: document.getElementById('reacts-to-collision').checked,
+            collisionHandlers: {
+                onCollision: { cor: document.getElementById('cor-colisao').value },
+                onNoCollision: { cor: document.getElementById('cor').value }
+            }
+        };
+    } else if (type === 'slider') {
+         return {
+            ...commonConfig,
+            largura: 300, // Largura fixa para sliders
+            altura: 50,  // Altura fixa
+            targetId: document.getElementById('target-object').value,
+            targetProperty: document.getElementById('target-property').value,
+            min: parseFloat(document.getElementById('min-value').value),
+            max: parseFloat(document.getElementById('max-value').value),
+        };
+    }
 }
 
 
@@ -147,7 +210,8 @@ function handleFormSubmit(event) {
         }
         objectsData = objectsData.map(data => data.id === id ? config : data);
     } else {
-        createRetanguloInstance(config);
+        if (config.type === 'retangulo') createRetanguloInstance(config);
+        else if (config.type === 'slider') createSliderInstance(config);
         objectsData.push(config);
     }
     
@@ -172,8 +236,8 @@ function handleDuplicate() {
     const config = getConfigFromForm();
     const newConfig = {
         ...config,
-        id: `rect_${Date.now()}`, // Cria um novo ID único
-        nome: `${config.nome} (cópia)`, // Adiciona um sufixo ao nome
+        id: `${config.type}_${Date.now()}`,
+        nome: `${config.nome} (cópia)`,
         x: config.x + 20,
         y: config.y + 20,
     };
@@ -182,32 +246,45 @@ function handleDuplicate() {
     objectsData.push(newConfig);
     saveObjectsToStorage(objectsData);
     
-    createRetanguloInstance(newConfig);
+    if (newConfig.type === 'retangulo') createRetanguloInstance(newConfig);
+    else if (newConfig.type === 'slider') createSliderInstance(newConfig);
+
     closeForm();
 }
 
 // --- INICIALIZAÇÃO E CRIAÇÃO DE INSTÂNCIAS ---
 
 function createRetanguloInstance(config) {
-    // CORREÇÃO: Passando a STORAGE_KEY para o construtor do objeto.
     const newRect = new Retangulo(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
     allObjects.push(newRect);
+}
+
+function createSliderInstance(config) {
+    const newSlider = new Slider(scene, config, allObjects, openForm, STORAGE_KEY);
+    allObjects.push(newSlider);
 }
 
 function init() {
     const objectsData = loadObjectsFromStorage();
     if (objectsData.length === 0) {
+        // Adiciona um objeto padrão se não houver nada salvo
         const defaultObjects = [
-            { id: `rect_1`, nome: 'Retângulo Azul', x: 100, y: 150, largura: 150, altura: 80, rotation: 0, reactsToCollision: true, collisionHandlers: { onCollision: { cor: 'rgba(52, 211, 153, 1)' }, onNoCollision: { cor: 'rgba(59, 130, 246, 1)' } } },
-            { id: `rect_2`, nome: 'Quadrado Vermelho', x: 300, y: 200, largura: 100, altura: 100, rotation: Math.PI / 4, reactsToCollision: true, collisionHandlers: { onCollision: { cor: 'rgba(250, 204, 21, 1)' }, onNoCollision: { cor: 'rgba(239, 68, 68, 1)' } } }
+            { id: `retangulo_1`, type: 'retangulo', nome: 'Retângulo Azul', x: 100, y: 150, largura: 150, altura: 80, rotation: 0, reactsToCollision: true, collisionHandlers: { onCollision: { cor: 'rgba(52, 211, 153, 1)' }, onNoCollision: { cor: 'rgba(59, 130, 246, 1)' } } },
         ];
         saveObjectsToStorage(defaultObjects);
-        defaultObjects.forEach(createRetanguloInstance);
+        defaultObjects.forEach(data => {
+            if (data.type === 'retangulo') createRetanguloInstance(data);
+            else if (data.type === 'slider') createSliderInstance(data);
+        });
     } else {
-        objectsData.forEach(createRetanguloInstance);
+        objectsData.forEach(data => {
+            if (data.type === 'retangulo') createRetanguloInstance(data);
+            else if (data.type === 'slider') createSliderInstance(data);
+        });
     }
     
-    addRectBtn.addEventListener('click', () => openForm(null));
+    addRectBtn.addEventListener('click', () => openForm(null, 'retangulo'));
+    addSliderBtn.addEventListener('click', () => openForm(null, 'slider'));
     cancelBtn.addEventListener('click', closeForm);
     deleteBtn.addEventListener('click', handleDelete);
     duplicateBtn.addEventListener('click', handleDuplicate);

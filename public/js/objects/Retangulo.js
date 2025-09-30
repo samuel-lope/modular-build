@@ -30,16 +30,8 @@ export default class Retangulo {
      * @param {object} config - O novo objeto de configuração.
      */
     update(config) {
-        this.id = config.id;
-        this.nome = config.nome;
-        this.x = config.x;
-        this.y = config.y;
-        this.largura = config.largura;
-        this.altura = config.altura;
-        this.rotation = config.rotation;
-        this.reactsToCollision = config.reactsToCollision;
-        this.collisionHandlers = config.collisionHandlers;
-        this.cor = this.collisionHandlers.onNoCollision.cor;
+        // Atualiza todas as propriedades da instância
+        Object.assign(this, config);
         
         if(this.elementoHTML) {
             this.atualizarPosicaoVisual();
@@ -61,7 +53,7 @@ export default class Retangulo {
             const objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
             const currentData = objectsData.find(d => d.id === this.id);
             if (currentData) {
-                this.openFormCallback(currentData);
+                this.openFormCallback(currentData, this.type);
             }
         });
 
@@ -84,7 +76,13 @@ export default class Retangulo {
         this.elementoHTML.style.width = `${this.largura}px`;
         this.elementoHTML.style.height = `${this.altura}px`;
         this.elementoHTML.style.transformOrigin = `50% 50%`;
-        this.elementoHTML.style.transform = `rotate(${this.rotation}rad)`;
+        // Converte radianos para graus para o CSS se a propriedade for rotation
+        if (this.rotation !== undefined) {
+             const rotationInDegrees = this.rotation * (180 / Math.PI);
+             this.elementoHTML.style.transform = `rotate(${rotationInDegrees}deg)`;
+        } else {
+             this.elementoHTML.style.transform = `none`;
+        }
     }
     
     /**
@@ -96,23 +94,17 @@ export default class Retangulo {
         let targetCor;
 
         if (!this.reactsToCollision) {
-            // Se não reage, a cor é sempre a padrão.
             targetCor = this.collisionHandlers.onNoCollision.cor;
         } else {
-            // Se reage, a cor depende do estado de colisão.
             targetCor = this.isColliding 
                 ? this.collisionHandlers.onCollision.cor 
                 : this.collisionHandlers.onNoCollision.cor;
         }
 
-        // CORREÇÃO: A verificação agora compara a cor do elemento DOM com a cor alvo.
-        // Isso garante que a cor inicial seja aplicada, já que o estilo do elemento
-        // estará vazio no começo ("") e será diferente da cor alvo.
         if (this.elementoHTML.style.backgroundColor !== targetCor) {
             this.elementoHTML.style.backgroundColor = targetCor;
         }
         
-        // Mantém a propriedade interna de cor em sincronia.
         this.cor = targetCor;
     }
 
