@@ -6,12 +6,7 @@
     "directory": "./public"
   },
   "vars": {},
-  "kv_namespaces": [
-    {
-      "binding": "",
-      "id": ""
-    }
-  ],
+  "kv_namespaces": [],
   "routes": [
     {
       "pattern": "design.sl.app.br",
