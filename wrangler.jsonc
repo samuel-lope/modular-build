@@ -1,5 +1,5 @@
 {
-  "name": "module-build",
+  "name": "modular-build",
   "compatibility_date": "2025-06-20",
   "main": "src/worker.js",
   "assets": {
