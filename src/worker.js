@@ -6,6 +6,7 @@
  * - Run "npm run deploy" to publish your worker
  *
  * Learn more at https://developers.cloudflare.com/workers/
+ * primeira versão estável
  */
 
 export default {
