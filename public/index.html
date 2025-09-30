@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Projeto 2D Interativo</title>
+    <!-- Incluindo Tailwind CSS para uma estilização rápida e moderna -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link para a nossa folha de estilos personalizada -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100 m-0 p-0">
+
+    <!-- O contêiner principal que servirá como nossa tela ou "malha" -->
+    <div id="scene"></div>
+
+    <!-- Elemento para exibir as coordenadas do objeto -->
+    <div id="coordinates-display" class="fixed top-4 left-4 bg-white bg-opacity-80 p-3 rounded-lg shadow-md text-gray-700">
+        Coordenadas (X, Y): <span id="coords" class="font-mono font-bold">...</span>
+    </div>
+
+    <!-- Script principal da aplicação. O `type="module"` é essencial para usar `import`. -->
+    <script type="module" src="js/main.js"></script>
+
+</body>
+</html>
+
