@@ -2,21 +2,93 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeto 2D Interativo</title>
     <!-- Incluindo Tailwind CSS para uma estilização rápida e moderna -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Link para a nossa folha de estilos personalizada -->
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-gray-100 m-0 p-0">
+<body class="bg-gray-100 m-0 p-0 overflow-hidden">
 
     <!-- O contêiner principal que servirá como nossa tela ou "malha" -->
     <div id="scene"></div>
 
-    <!-- Elemento para exibir as coordenadas do objeto -->
-    <div id="coordinates-display" class="fixed top-4 left-4 bg-white bg-opacity-80 p-3 rounded-lg shadow-md text-gray-700">
-        Coordenadas (X, Y): <span id="coords" class="font-mono font-bold">...</span>
+    <!-- Controles da UI -->
+    <div id="ui-controls" class="fixed top-4 left-4 flex flex-col gap-4 z-10">
+        <!-- Botão para adicionar um novo objeto -->
+        <button id="add-rect-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+            Adicionar Retângulo
+        </button>
+        <!-- Elemento para exibir as coordenadas do objeto -->
+        <div id="coordinates-display" class="bg-white bg-opacity-80 p-3 rounded-lg shadow-md text-gray-700">
+            Coordenadas (X, Y): <span id="coords" class="font-mono font-bold">...</span>
+        </div>
+    </div>
+
+    <!-- Formulário Modal para Edição/Criação de Objetos (inicialmente oculto) -->
+    <div id="form-container" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <form id="object-form" class="bg-white p-6 rounded-lg shadow-2xl w-full max-w-lg space-y-4">
+            <h2 id="form-title" class="text-2xl font-bold text-gray-800 mb-4">Configurar Objeto</h2>
+            
+            <!-- Campo oculto para armazenar o ID estável do objeto -->
+            <input type="hidden" id="object-id">
+
+            <div>
+                <label for="object-name" class="block text-sm font-medium text-gray-700">Nome</label>
+                <input type="text" id="object-name" placeholder="ex: Meu Retângulo" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="largura" class="block text-sm font-medium text-gray-700">Dimensões (Largura x Altura)</label>
+                <div class="flex gap-2">
+                    <input type="number" id="largura" placeholder="Largura" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="number" id="altura" placeholder="Altura" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+
+            <div>
+                <label for="x" class="block text-sm font-medium text-gray-700">Posição (X, Y)</label>
+                <div class="flex gap-2">
+                    <input type="number" id="x" placeholder="Posição X" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="number" id="y" placeholder="Posição Y" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+
+             <div>
+                <label for="rotation" class="block text-sm font-medium text-gray-700">Rotação (Graus)</label>
+                <input type="number" id="rotation" value="0" step="any" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="cor" class="block text-sm font-medium text-gray-700">Cor Padrão (formato RGBA)</label>
+                <input type="text" id="cor" placeholder="ex: rgba(0, 0, 255, 1)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+             <div>
+                <label for="cor-colisao" class="block text-sm font-medium text-gray-700">Cor em Colisão (formato RGBA)</label>
+                <input type="text" id="cor-colisao" placeholder="ex: rgba(255, 0, 0, 1)" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="reacts-to-collision" class="flex items-center text-sm font-medium text-gray-700 cursor-pointer">
+                    <input type="checkbox" id="reacts-to-collision" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2">
+                    <span>Reage à colisão</span>
+                </label>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="flex justify-between items-center pt-4">
+                <div>
+                    <button type="button" id="delete-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors">Excluir</button>
+                    <button type="button" id="duplicate-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors ml-2">Duplicar</button>
+                </div>
+                <div>
+                    <button type="button" id="cancel-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors mr-2">Cancelar</button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors">Salvar</button>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- Script principal da aplicação. O `type="module"` é essencial para usar `import`. -->

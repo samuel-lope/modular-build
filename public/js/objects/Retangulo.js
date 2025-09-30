@@ -1,107 +1,133 @@
 /**
  * Classe que define um objeto Retângulo 2D.
- * Todas as suas características e comportamentos estão encapsulados aqui.
  */
 export default class Retangulo {
     /**
-     * @param {HTMLElement} scene - O elemento do palco onde o retângulo será adicionado.
+     * @param {HTMLElement} scene - O elemento do palco.
      * @param {HTMLElement} coordinatesElement - O elemento span para exibir as coordenadas.
-     * @param {number} x - Posição inicial no eixo X.
-     * @param {number} y - Posição inicial no eixo Y.
-     * @param {number} largura - Largura do retângulo.
-     * @param {number} altura - Altura do retângulo.
-     * @param {string} cor - Cor inicial de preenchimento (classe do Tailwind CSS, ex: 'bg-blue-500').
-     * @param {object} eixoGiro - Ponto de pivô para rotação {x, y} em percentual (0 a 1), onde {x:0.5, y:0.5} é o centro.
-     * @param {number} rotation - Rotação inicial do objeto em radianos.
-     * @param {object} collisionHandlers - Objeto que define o comportamento em caso de colisão. Ex: { onCollision: { cor: '...' }, onNoCollision: { cor: '...' } }
+     * @param {object} config - O objeto de configuração com todas as propriedades.
+     * @param {Function} openFormCallback - Callback para abrir o formulário de edição.
+     * @param {string} storageKey - A chave usada para o localStorage.
      */
-    constructor(scene, coordinatesElement, x, y, largura, altura, cor, eixoGiro = { x: 0.5, y: 0.5 }, rotation = 0, collisionHandlers = null) {
+    constructor(scene, coordinatesElement, config, openFormCallback, storageKey) {
         this.scene = scene;
         this.coordinatesElement = coordinatesElement;
-        this.x = x;
-        this.y = y;
-        this.largura = largura;
-        this.altura = altura;
-        this.cor = cor;
-        this.eixoGiro = eixoGiro;
-        this.rotation = rotation;
-        this.collisionHandlers = collisionHandlers;
-
+        this.openFormCallback = openFormCallback;
+        this.storageKey = storageKey;
+        
         this.elementoHTML = null;
         this.isDragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
-        
-        this.isColliding = false; // Novo estado para controlar a colisão
+        this.isColliding = false;
 
         this.criarElemento();
+        this.update(config);
     }
 
     /**
-     * Cria o elemento DIV no DOM que representa o retângulo e adiciona os eventos de mouse.
+     * Atualiza as propriedades do objeto a partir de um novo objeto de configuração.
+     * @param {object} config - O novo objeto de configuração.
+     */
+    update(config) {
+        this.id = config.id;
+        this.nome = config.nome;
+        this.x = config.x;
+        this.y = config.y;
+        this.largura = config.largura;
+        this.altura = config.altura;
+        this.rotation = config.rotation;
+        this.reactsToCollision = config.reactsToCollision;
+        this.collisionHandlers = config.collisionHandlers;
+        this.cor = this.collisionHandlers.onNoCollision.cor;
+        
+        if(this.elementoHTML) {
+            this.atualizarPosicaoVisual();
+            this.updateAppearance();
+        }
+    }
+
+    /**
+     * Cria o elemento DIV no DOM que representa o retângulo.
      */
     criarElemento() {
         this.elementoHTML = document.createElement('div');
-        this.elementoHTML.classList.add('draggable', this.cor);
-        this.elementoHTML.style.width = `${this.largura}px`;
-        this.elementoHTML.style.height = `${this.altura}px`;
+        this.elementoHTML.classList.add('draggable');
         
-        this.elementoHTML.style.transformOrigin = `${this.eixoGiro.x * 100}% ${this.eixoGiro.y * 100}%`;
-
-        this.scene.appendChild(this.elementoHTML);
-
         this.elementoHTML.addEventListener('mousedown', this.iniciarArrasto.bind(this));
         document.addEventListener('mousemove', this.arrastar.bind(this));
         document.addEventListener('mouseup', this.pararArrasto.bind(this));
+        this.elementoHTML.addEventListener('dblclick', () => {
+            const objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
+            const currentData = objectsData.find(d => d.id === this.id);
+            if (currentData) {
+                this.openFormCallback(currentData);
+            }
+        });
 
-        this.atualizarPosicaoVisual();
-        if (this.coordinatesElement.textContent === '...') {
-             this.atualizarDisplayCoordenadas();
-        }
+        this.scene.appendChild(this.elementoHTML);
     }
     
     /**
-     * Converte as coordenadas do nosso sistema (0,0 no canto inferior esquerdo)
-     * para o sistema de posicionamento do CSS (0,0 no canto superior esquerdo).
+     * Atualiza a posição, tamanho e rotação do elemento no DOM.
      */
     atualizarPosicaoVisual() {
         if (!this.elementoHTML) return;
+
+        this.elementoHTML.id = this.id;
 
         const cssLeft = this.x;
         const cssTop = this.scene.clientHeight - this.y - this.altura;
 
         this.elementoHTML.style.left = `${cssLeft}px`;
         this.elementoHTML.style.top = `${cssTop}px`;
+        this.elementoHTML.style.width = `${this.largura}px`;
+        this.elementoHTML.style.height = `${this.altura}px`;
+        this.elementoHTML.style.transformOrigin = `50% 50%`;
         this.elementoHTML.style.transform = `rotate(${this.rotation}rad)`;
     }
     
     /**
-     * Atualiza a aparência do objeto com base no seu estado de colisão.
-     * Este método é chamado a cada frame pelo gameLoop.
+     * Atualiza a cor do objeto com base no seu estado de colisão.
      */
     updateAppearance() {
-        // Se não houver handlers de colisão para este objeto, não faz nada.
         if (!this.collisionHandlers) return;
+        
+        let targetCor;
 
-        let newCor = null;
-        // Verifica qual cor deve ser aplicada com base no estado de colisão
-        if (this.isColliding && this.collisionHandlers.onCollision?.cor) {
-            newCor = this.collisionHandlers.onCollision.cor;
-        } else if (!this.isColliding && this.collisionHandlers.onNoCollision?.cor) {
-            newCor = this.collisionHandlers.onNoCollision.cor;
+        if (!this.reactsToCollision) {
+            // Se não reage, a cor é sempre a padrão.
+            targetCor = this.collisionHandlers.onNoCollision.cor;
+        } else {
+            // Se reage, a cor depende do estado de colisão.
+            targetCor = this.isColliding 
+                ? this.collisionHandlers.onCollision.cor 
+                : this.collisionHandlers.onNoCollision.cor;
         }
 
-        // Se a cor calculada for diferente da cor atual, aplica a nova cor.
-        // Isso evita manipulação desnecessária do DOM.
-        if (newCor && this.cor !== newCor) {
-            this.elementoHTML.classList.remove(this.cor);
-            this.cor = newCor;
-            this.elementoHTML.classList.add(this.cor);
+        // CORREÇÃO: A verificação agora compara a cor do elemento DOM com a cor alvo.
+        // Isso garante que a cor inicial seja aplicada, já que o estilo do elemento
+        // estará vazio no começo ("") e será diferente da cor alvo.
+        if (this.elementoHTML.style.backgroundColor !== targetCor) {
+            this.elementoHTML.style.backgroundColor = targetCor;
+        }
+        
+        // Mantém a propriedade interna de cor em sincronia.
+        this.cor = targetCor;
+    }
+
+
+    /**
+     * Remove o elemento do objeto do DOM.
+     */
+    destroy() {
+        if (this.elementoHTML) {
+            this.elementoHTML.remove();
         }
     }
 
     /**
-     * Atualiza o texto que exibe as coordenadas atuais do objeto.
+     * Atualiza o texto que exibe as coordenadas.
      */
     atualizarDisplayCoordenadas() {
         this.coordinatesElement.textContent = `${Math.round(this.x)}, ${Math.round(this.y)}`;
@@ -112,26 +138,33 @@ export default class Retangulo {
     iniciarArrasto(event) {
         this.isDragging = true;
         this.elementoHTML.style.zIndex = 1000;
-
+        
         const rect = this.elementoHTML.getBoundingClientRect();
         this.offsetX = event.clientX - rect.left;
-        
-        const mouseYInScene = this.scene.clientHeight - event.clientY;
-        this.offsetY = mouseYInScene - this.y;
+        this.offsetY = event.clientY - rect.top;
     }
-
-
 
     arrastar(event) {
         if (!this.isDragging) return;
         event.preventDefault();
 
-        this.x = event.clientX - this.offsetX;
-        const mouseYInScene = this.scene.clientHeight - event.clientY;
-        this.y = mouseYInScene - this.offsetY;
+        const sceneRect = this.scene.getBoundingClientRect();
+        const newCssLeft = event.clientX - sceneRect.left - this.offsetX;
+        const newCssTop = event.clientY - sceneRect.top - this.offsetY;
+
+        this.x = Math.round(newCssLeft);
+        this.y = Math.round(this.scene.clientHeight - newCssTop - this.altura);
 
         this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.largura));
         this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.altura));
+        
+        const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
+            if (d.id === this.id) {
+                return { ...d, x: this.x, y: this.y };
+            }
+            return d;
+        });
+        localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
 
         this.atualizarPosicaoVisual();
         this.atualizarDisplayCoordenadas();
