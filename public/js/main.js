@@ -542,6 +542,16 @@ function init() {
         URL.revokeObjectURL(url);
     });
 
+    const clearSceneBtn = document.getElementById('clear-scene-btn');
+    clearSceneBtn.addEventListener('click', () => {
+        if (confirm('Tem certeza de que deseja limpar todos os objetos da cena? Esta ação não pode ser desfeita.')) {
+            const appData = loadAppDataFromStorage();
+            appData.objects = []; // Esvazia o array de objetos
+            saveAppDataToStorage(appData);
+            window.location.reload();
+        }
+    });
+
     // Funcionalidade de Upload do JSON
     const uploadJsonInput = document.getElementById('upload-json-input');
     uploadJsonInput.addEventListener('change', (event) => {

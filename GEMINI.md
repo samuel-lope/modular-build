@@ -115,7 +115,20 @@ O projeto é uma aplicação web que permite aos usuários criar, manipular e co
 - **Propriedades**: `targetId`, `targetProperty`, `min`, `max`.
 - **Funcionalidades**: Exibe um controle deslizante. Ao ser alterado, ele modifica em tempo real a propriedade (`targetProperty`) do objeto alvo (`targetId`). Pode ser arrastado pela cena.
 
-## 5. Correções Recentes (01/10/2025)
+## 5. Novas Funcionalidades e Correções (01/10/2025)
+
+### Novas Funcionalidades
+
+- **Importar/Exportar Cena (JSON):**
+  - No modal "Gerenciar Objetos", foram adicionados um botão **"Baixar JSON"** e um campo **"Carregar JSON"**.
+  - **Exportar:** O botão "Baixar JSON" permite que o usuário faça o download de um arquivo `.json` contendo todos os dados da cena atual (incluindo a posição e configuração de todos os objetos e o tema).
+  - **Importar:** O campo "Carregar JSON" permite que o usuário selecione um arquivo `.json` de seu computador. A aplicação valida o arquivo, e se for um arquivo de cena válido, os dados são carregados no `localStorage` e a página é recarregada para exibir a nova cena.
+
+- **Limpar a Cena:**
+  - Um botão **"Limpar Cena"** foi adicionado ao canto superior direito da tela.
+  - Ao clicar neste botão, o usuário recebe uma confirmação. Se confirmado, todos os objetos são removidos do `localStorage` e a página é recarregada, resultando em uma cena limpa.
+
+### Correções de Bugs
 
 - **Correção de Bug Crítico no Formulário:**
   - **Problema:** Um erro de digitação e uma `div` mal posicionada no `index.html` faziam com que o formulário de criação/edição de objetos falhasse ao tentar adicionar um `Slider`, causando um erro (`Cannot set properties of null`) e desconfigurando o formulário para `Retangulo` e `Círculo`.
