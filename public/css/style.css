@@ -3,11 +3,12 @@ body {
 }
 
 #scene {
-    background-color: #374151; /* gray-700 */
+    background-color: #374151; /* Cor Padrão */
     background-image:
         linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
     background-size: 20px 20px;
+    transition: background-color 0.3s ease;
 }
 
 .draggable {
@@ -73,6 +74,26 @@ body {
     cursor: pointer;
     border-radius: 50%;
 }
+
+/* Estilo para o seletor de cor */
+#bg-color-picker {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+#bg-color-picker::-webkit-color-swatch {
+    border-radius: 6px;
+    border: 1px solid #4b5563; /* gray-600 */
+}
+#bg-color-picker::-moz-color-swatch {
+    border-radius: 6px;
+    border: 1px solid #4b5563; /* gray-600 */
+}
+
 
 /* Estilos da Tabela Modal */
 #objects-table th, 

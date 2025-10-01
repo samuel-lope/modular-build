@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Projeto 2D Interativo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
@@ -17,7 +17,7 @@
 
         <!-- Controles da UI -->
         <div id="ui-controls" class="absolute top-4 left-4 flex flex-col space-y-2">
-            <div class="flex space-x-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <button id="add-rect-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md transition-colors font-semibold">
                     Adicionar Retângulo
                 </button>
@@ -31,8 +31,12 @@
                     Gerenciar Objetos
                 </button>
             </div>
-            <div id="coords" class="bg-gray-900 bg-opacity-70 text-sm rounded-lg px-3 py-2 shadow-lg">
-                Coordenadas (X, Y): ...
+             <div class="bg-gray-900 bg-opacity-70 text-sm rounded-lg px-3 py-2 shadow-lg flex items-center space-x-4">
+                <span>Coordenadas (X, Y): ...</span>
+                <div class="flex items-center space-x-2">
+                    <label for="bg-color-picker" class="font-medium">Fundo:</label>
+                    <input type="color" id="bg-color-picker" class="w-7 h-7">
+                </div>
             </div>
         </div>
     </div>

@@ -51,8 +51,8 @@ export default class Retangulo {
 
         this.elementoHTML.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            const objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
-            const currentData = objectsData.find(d => d.id === this.id);
+            const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
+            const currentData = appData.objects.find(d => d.id === this.id);
             if (currentData) {
                 this.openFormCallback(currentData, this.type);
             }
@@ -122,13 +122,14 @@ export default class Retangulo {
 
         this.coordinatesSpan.textContent = `Coordenadas (X, Y): ${this.x}, ${this.y}`;
 
-        const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
+        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
+        appData.objects = appData.objects.map(d => {
             if (d.id === this.id) {
                 return { ...d, x: this.x, y: this.y };
             }
             return d;
         });
-        localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
+        localStorage.setItem(this.storageKey, JSON.stringify(appData));
         
         this.updateAppearance();
     }

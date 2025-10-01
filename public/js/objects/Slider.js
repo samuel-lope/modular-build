@@ -66,8 +66,8 @@ export default class Slider {
         
         this.elementoHTML.addEventListener('dblclick', (e) => {
             e.stopPropagation();
-            const objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
-            const currentData = objectsData.find(d => d.id === this.id);
+            const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
+            const currentData = appData.objects.find(d => d.id === this.id);
             if (currentData) {
                 this.openFormCallback(currentData, this.type);
             }
@@ -101,7 +101,7 @@ export default class Slider {
             let currentValue = targetInstance[this.targetProperty];
             // Converte rotação de radianos para graus para o slider
             if(this.targetProperty === 'rotation') {
-                currentValue = currentValue * (180 / Math.PI);
+                currentValue = (currentValue || 0) * (180 / Math.PI);
             }
             this.sliderInput.value = currentValue;
             this.label.textContent = `${this.nome}: ${Math.round(currentValue)}`;
@@ -124,15 +124,20 @@ export default class Slider {
             valueToSave = newValue * (Math.PI / 180);
         }
 
-        const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
+        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
+        let updatedConfig = null;
+        appData.objects = appData.objects.map(d => {
             if (d.id === this.targetId) {
-                return { ...d, [this.targetProperty]: valueToSave };
+                updatedConfig = { ...d, [this.targetProperty]: valueToSave };
+                return updatedConfig;
             }
             return d;
         });
-        localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
+        localStorage.setItem(this.storageKey, JSON.stringify(appData));
         
-        targetInstance.update(objectsData.find(d => d.id === this.targetId));
+        if (updatedConfig) {
+            targetInstance.update(updatedConfig);
+        }
     }
     
     /**
@@ -164,14 +169,15 @@ export default class Slider {
 
         this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.largura));
         this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.altura));
-
-        const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
+        
+        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
+        appData.objects = appData.objects.map(d => {
             if (d.id === this.id) {
                 return { ...d, x: this.x, y: this.y };
             }
             return d;
         });
-        localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
+        localStorage.setItem(this.storageKey, JSON.stringify(appData));
 
         this.updateAppearance();
     }

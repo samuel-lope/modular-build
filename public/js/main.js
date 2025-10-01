@@ -4,7 +4,8 @@ import Slider from './objects/Slider.js';
 
 // --- CONFIGURAÇÃO INICIAL ---
 const scene = document.getElementById('scene');
-const coordinatesSpan = document.getElementById('coords');
+const coordinatesSpan = document.querySelector('#ui-controls span');
+const bgColorPicker = document.getElementById('bg-color-picker');
 
 // --- ELEMENTOS DO FORMULÁRIO ---
 const formContainer = document.getElementById('form-container');
@@ -34,23 +35,27 @@ const sliderFields = document.getElementById('slider-fields');
 // --- ESTADO DA APLICAÇÃO ---
 let isCollisionDetectionActive = true;
 const allObjects = []; // Array para armazenar as instâncias dos objetos
-const STORAGE_KEY = 'interactive_2d_objects_v7';
+const STORAGE_KEY = 'interactive_2d_app_data_v1';
+const DEFAULT_THEME = { backgroundColor: '#374151' };
 
 /**
- * Lê os dados dos objetos do localStorage.
- * @returns {Array} - Array de configurações de objetos.
+ * Lê os dados da aplicação do localStorage.
+ * @returns {{theme: object, objects: Array}} - Objeto com tema e array de objetos.
  */
-function loadObjectsFromStorage() {
-    const objectsJSON = localStorage.getItem(STORAGE_KEY);
-    return objectsJSON ? JSON.parse(objectsJSON) : [];
+function loadAppDataFromStorage() {
+    const dataJSON = localStorage.getItem(STORAGE_KEY);
+    if (dataJSON) {
+        return JSON.parse(dataJSON);
+    }
+    return { theme: { ...DEFAULT_THEME }, objects: [] };
 }
 
 /**
- * Salva os dados dos objetos no localStorage.
- * @param {Array} objectsData - Array de configurações de objetos para salvar.
+ * Salva os dados da aplicação no localStorage.
+ * @param {{theme: object, objects: Array}} appData - O objeto de dados da aplicação.
  */
-function saveObjectsToStorage(objectsData) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(objectsData));
+function saveAppDataToStorage(appData) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 }
 
 /**
@@ -104,7 +109,7 @@ function populateTargetObjectDropdown(currentId) {
     const targetObjectSelect = document.getElementById('target-object');
     targetObjectSelect.innerHTML = '';
     
-    const objectsData = loadObjectsFromStorage();
+    const { objects: objectsData } = loadAppDataFromStorage();
     const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo'].includes(obj.type));
 
     availableTargets.forEach(target => {
@@ -128,6 +133,8 @@ function openForm(config = null, type) {
     shapeCommonFields.classList.add('hidden');
     sliderFields.classList.add('hidden');
 
+    const { objects: objectsData } = loadAppDataFromStorage();
+
     if (config) { // Modo Edição
         formTitle.textContent = `Editar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         objectIdInput.value = config.id;
@@ -140,7 +147,7 @@ function openForm(config = null, type) {
     } else { // Modo Criação
         formTitle.textContent = `Adicionar Novo ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         objectIdInput.value = `${type}_${Date.now()}`;
-        document.getElementById('object-view').value = loadObjectsFromStorage().length;
+        document.getElementById('object-view').value = objectsData.length;
         document.getElementById('x').value = Math.round(Math.random() * 200 + 50);
         document.getElementById('y').value = Math.round(Math.random() * 200 + 50);
         deleteBtn.classList.add('hidden');
@@ -252,17 +259,17 @@ function handleFormSubmit(event) {
     const config = getConfigFromForm();
     const id = config.id;
     
-    let objectsData = loadObjectsFromStorage();
-    const isEditing = objectsData.some(obj => obj.id === id);
+    const appData = loadAppDataFromStorage();
+    const isEditing = appData.objects.some(obj => obj.id === id);
 
     if (isEditing) {
-        objectsData = objectsData.map(data => (data.id === id ? config : data));
+        appData.objects = appData.objects.map(data => (data.id === id ? config : data));
         const objectInstance = allObjects.find(obj => obj.id === id);
         if (objectInstance) {
             objectInstance.update(config);
         }
     } else {
-        objectsData.push(config);
+        appData.objects.push(config);
         if (config.type === 'retangulo') {
             createRetanguloInstance(config);
         } else if (config.type === 'circulo') {
@@ -272,7 +279,7 @@ function handleFormSubmit(event) {
         }
     }
     
-    saveObjectsToStorage(objectsData);
+    saveAppDataToStorage(appData);
     closeForm();
 }
 
@@ -283,9 +290,10 @@ function handleDelete() {
         allObjects[objectIndex].destroy();
         allObjects.splice(objectIndex, 1);
     }
-    let objectsData = loadObjectsFromStorage();
-    objectsData = objectsData.filter(data => data.id !== idToDelete);
-    saveObjectsToStorage(objectsData);
+    
+    const appData = loadAppDataFromStorage();
+    appData.objects = appData.objects.filter(data => data.id !== idToDelete);
+    saveAppDataToStorage(appData);
     closeForm();
 }
 
@@ -299,9 +307,9 @@ function handleDuplicate() {
         y: config.y + 20,
     };
     
-    let objectsData = loadObjectsFromStorage();
-    objectsData.push(newConfig);
-    saveObjectsToStorage(objectsData);
+    const appData = loadAppDataFromStorage();
+    appData.objects.push(newConfig);
+    saveAppDataToStorage(appData);
     
     if (newConfig.type === 'retangulo') createRetanguloInstance(newConfig);
     else if (newConfig.type === 'circulo') createCirculoInstance(newConfig);
@@ -316,7 +324,7 @@ const tableHeaders = ['ID', 'Nome', 'Tipo', 'View', 'X', 'Y', 'Largura', 'Altura
 const editableProperties = ['nome', 'view', 'x', 'y', 'largura', 'altura', 'diametro', 'rotation', 'targetId', 'targetProperty'];
 
 function openObjectsTable() {
-    const objectsData = loadObjectsFromStorage();
+    const { objects: objectsData } = loadAppDataFromStorage();
     const thead = objectsTable.querySelector('thead');
     const tbody = objectsTable.querySelector('tbody');
 
@@ -361,7 +369,7 @@ function openObjectsTable() {
             td.dataset.objectId = obj.id;
             td.dataset.property = key;
 
-            if (editableProperties.includes(key)) {
+            if (editableProperties.includes(key) && obj[key] !== undefined) {
                 td.contentEditable = true;
                 td.addEventListener('blur', handleTableCellEdit);
                 td.addEventListener('keydown', (e) => {
@@ -401,10 +409,10 @@ function handleTableCellEdit(event) {
         valueToSave = newValue * (Math.PI / 180); // Converte graus para radianos
     }
 
-    let objectsData = loadObjectsFromStorage();
+    const appData = loadAppDataFromStorage();
     let updatedConfig = null;
     
-    objectsData = objectsData.map(data => {
+    appData.objects = appData.objects.map(data => {
         if (data.id === objectId) {
             const newData = { ...data, [property]: valueToSave };
             updatedConfig = newData;
@@ -413,7 +421,7 @@ function handleTableCellEdit(event) {
         return data;
     });
 
-    saveObjectsToStorage(objectsData);
+    saveAppDataToStorage(appData);
 
     if (updatedConfig) {
         const instance = allObjects.find(obj => obj.id === objectId);
@@ -442,13 +450,20 @@ function createSliderInstance(config) {
 }
 
 function init() {
-    const objectsData = loadObjectsFromStorage();
-    objectsData.forEach(data => {
+    const appData = loadAppDataFromStorage();
+    
+    // Aplica o tema
+    scene.style.backgroundColor = appData.theme.backgroundColor;
+    bgColorPicker.value = appData.theme.backgroundColor;
+
+    // Carrega os objetos
+    appData.objects.forEach(data => {
         if (data.type === 'retangulo') createRetanguloInstance(data);
         else if (data.type === 'circulo') createCirculoInstance(data);
         else if (data.type === 'slider') createSliderInstance(data);
     });
     
+    // Configura os event listeners
     addRectBtn.addEventListener('click', () => openForm(null, 'retangulo'));
     addCircleBtn.addEventListener('click', () => openForm(null, 'circulo'));
     addSliderBtn.addEventListener('click', () => openForm(null, 'slider'));
@@ -459,6 +474,14 @@ function init() {
 
     manageObjectsBtn.addEventListener('click', openObjectsTable);
     closeTableBtn.addEventListener('click', closeObjectsTable);
+
+    bgColorPicker.addEventListener('input', (event) => {
+        const newColor = event.target.value;
+        scene.style.backgroundColor = newColor;
+        const currentData = loadAppDataFromStorage();
+        currentData.theme.backgroundColor = newColor;
+        saveAppDataToStorage(currentData);
+    });
 
     gameLoop();
 }
