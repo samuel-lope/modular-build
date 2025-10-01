@@ -528,6 +528,46 @@ function init() {
 
     closeTableBtn.addEventListener('click', closeObjectsTable);
 
+    // Funcionalidade de Download do JSON
+    const downloadJsonBtn = document.getElementById('download-json-btn');
+    downloadJsonBtn.addEventListener('click', () => {
+        const appData = loadAppDataFromStorage();
+        const dataStr = JSON.stringify(appData, null, 2); // Formata para melhor leitura
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `scene-data-${Date.now()}.json`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+    });
+
+    // Funcionalidade de Upload do JSON
+    const uploadJsonInput = document.getElementById('upload-json-input');
+    uploadJsonInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const appData = JSON.parse(e.target.result);
+                // Validação simples para garantir que o arquivo tem a estrutura esperada
+                if (appData && typeof appData === 'object' && appData.hasOwnProperty('theme') && appData.hasOwnProperty('objects')) {
+                    saveAppDataToStorage(appData);
+                    alert('Cena carregada com sucesso! A página será recarregada.');
+                    window.location.reload();
+                } else {
+                    alert('Erro: O arquivo JSON não parece ser um arquivo de cena válido.');
+                }
+            } catch (error) {
+                console.error("Erro ao carregar o arquivo JSON:", error);
+                alert('Erro ao processar o arquivo JSON. Verifique o console para mais detalhes.');
+            }
+        };
+        reader.readAsText(file);
+    });
+
     bgColorPicker.addEventListener('input', (event) => {
         const newColor = event.target.value;
         scene.style.backgroundColor = newColor;
