@@ -146,17 +146,30 @@ function openForm(config = null, type) {
 
     // Esconde todos os grupos de campos específicos
     Object.values(objectTypeRegistry).forEach(typeInfo => {
-        if(typeInfo.formFieldsId) document.getElementById(typeInfo.formFieldsId).classList.add('hidden');
-        if(typeInfo.commonFieldsId) document.getElementById(typeInfo.commonFieldsId).classList.add('hidden');
+        if (typeInfo.formFieldsId) {
+            const el = document.getElementById(typeInfo.formFieldsId);
+            if (el) el.classList.add('hidden');
+        }
+        if (typeInfo.commonFieldsId) {
+            const el = document.getElementById(typeInfo.commonFieldsId);
+            if (el) el.classList.add('hidden');
+        }
     });
 
     const { objects: objectsData } = loadAppDataFromStorage();
     const typeInfo = objectTypeRegistry[type];
     if (!typeInfo) return;
 
-    // Mostra os campos relevantes para o tipo de objeto
-    if (typeInfo.formFieldsId) document.getElementById(typeInfo.formFieldsId).classList.remove('hidden');
-    if (typeInfo.commonFieldsId) document.getElementById(typeInfo.commonFieldsId).classList.remove('hidden');
+    // **-- CORREÇÃO DEFINITIVA --**
+    // Mostra os campos relevantes, verificando antes se eles existem para evitar o crash.
+    if (typeInfo.formFieldsId) {
+        const el = document.getElementById(typeInfo.formFieldsId);
+        if (el) el.classList.remove('hidden');
+    }
+    if (typeInfo.commonFieldsId) {
+        const el = document.getElementById(typeInfo.commonFieldsId);
+        if (el) el.classList.remove('hidden');
+    }
 
     if (config) { // Modo Edição
         formTitle.textContent = `Editar ${typeInfo.displayName}`;
@@ -183,10 +196,12 @@ function openForm(config = null, type) {
             document.getElementById('cor').value = config.collisionHandlers.onNoCollision.cor;
             document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
             document.getElementById('reacts-to-collision').checked = config.reactsToCollision;
+            document.getElementById('is-obstacle').checked = config.isObstacle || false; // Adicionado aqui
         } else {
              document.getElementById('cor').value = 'rgba(59, 130, 246, 1)';
              document.getElementById('cor-colisao').value = 'rgba(239, 68, 68, 1)';
              document.getElementById('reacts-to-collision').checked = true;
+             document.getElementById('is-obstacle').checked = false; // Adicionado aqui
         }
     }
     
@@ -240,6 +255,7 @@ function getConfigFromForm() {
     
     const shapeCommonConfig = {
         reactsToCollision: document.getElementById('reacts-to-collision').checked,
+        isObstacle: document.getElementById('is-obstacle').checked, // Adicionado aqui
         collisionHandlers: {
             onCollision: { cor: document.getElementById('cor-colisao').value },
             onNoCollision: { cor: document.getElementById('cor').value }
@@ -450,18 +466,42 @@ function createObjectInstance(config) {
     const typeInfo = objectTypeRegistry[config.type];
     if (!typeInfo) return;
 
-    let newObject;
     const ObjectClass = typeInfo.class;
-
-    if (config.type === 'slider') {
-        newObject = new ObjectClass(scene, config, allObjects, openForm, STORAGE_KEY);
-    } else {
-        newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
+    let newObject;
+    
+    // A versão do GitHub não precisava dos parâmetros extras, 
+    // então voltamos à versão estável do construtor.
+    switch (config.type) {
+        case 'slider':
+            newObject = new ObjectClass(scene, config, allObjects, openForm, STORAGE_KEY);
+            break;
+        
+        case 'retangulo':
+        case 'circulo':
+            newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
+            // Injeta as dependências para o sistema de obstáculo
+            newObject.allObjectInstances = allObjects;
+            newObject.collisionChecker = checkAABBCollision;
+            break;
+        
+        default:
+            console.error(`Tipo de objeto desconhecido: ${config.type}`);
+            return;
     }
+
     allObjects.push(newObject);
 }
 
+
 function generateAddButtons() {
+    addButtonsContainer.innerHTML = '';
+    const manageBtn = document.createElement('button');
+    manageBtn.id = 'manage-objects-btn';
+    manageBtn.className = 'px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg shadow-md transition-colors font-semibold';
+    manageBtn.textContent = 'Gerenciar Objetos';
+    manageBtn.addEventListener('click', openObjectsTable);
+    addButtonsContainer.appendChild(manageBtn);
+
     for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
         const button = document.createElement('button');
         button.textContent = `Adicionar ${typeInfo.displayName}`;
@@ -476,20 +516,16 @@ function init() {
     
     generateAddButtons();
     
-    // Aplica o tema
     scene.style.backgroundColor = appData.theme.backgroundColor;
     bgColorPicker.value = appData.theme.backgroundColor;
 
-    // Carrega os objetos
     appData.objects.forEach(data => createObjectInstance(data));
     
-    // Configura os event listeners
     cancelBtn.addEventListener('click', closeForm);
     deleteBtn.addEventListener('click', handleDelete);
     duplicateBtn.addEventListener('click', handleDuplicate);
     objectForm.addEventListener('submit', handleFormSubmit);
 
-    manageObjectsBtn.addEventListener('click', openObjectsTable);
     closeTableBtn.addEventListener('click', closeObjectsTable);
 
     bgColorPicker.addEventListener('input', (event) => {

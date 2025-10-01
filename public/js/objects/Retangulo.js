@@ -8,12 +8,18 @@ export default class Retangulo {
      * @param {object} config - O objeto de configuração inicial.
      * @param {Function} openFormCallback - Callback para abrir o formulário de edição.
      * @param {string} storageKey - A chave usada para o localStorage.
+     * @param {Array} allObjectInstances - Referência ao array com todas as instâncias de objetos.
+     * @param {Function} collisionChecker - A função que verifica colisão AABB.
      */
     constructor(scene, coordinatesSpan, config, openFormCallback, storageKey) {
         this.scene = scene;
         this.coordinatesSpan = coordinatesSpan;
         this.openFormCallback = openFormCallback;
         this.storageKey = storageKey;
+
+        // Removido: allObjectInstances e collisionChecker não são mais passados aqui
+        this.allObjectInstances = null; // Será injetado depois se necessário
+        this.collisionChecker = null; // Será injetado depois se necessário
         
         this.elementoHTML = null;
         this.isDragging = false;
@@ -23,6 +29,7 @@ export default class Retangulo {
         // Propriedades de estado
         this.isColliding = false;
         this.view = 0; // Ordem de exibição
+        this.isObstacle = false;
 
         this.criarElemento();
         this.update(config); // Aplica a configuração inicial
@@ -35,6 +42,7 @@ export default class Retangulo {
     update(config) {
         Object.assign(this, config);
         this.view = config.view || 0; // Garante que a view seja definida
+        this.isObstacle = config.isObstacle || false;
         this.updateAppearance();
     }
     
@@ -111,17 +119,57 @@ export default class Retangulo {
         event.preventDefault();
 
         const sceneRect = this.scene.getBoundingClientRect();
-        const newCssLeft = event.clientX - sceneRect.left - this.offsetX;
-        const newCssTop = event.clientY - sceneRect.top - this.offsetY;
+        const obstacles = this.allObjectInstances.filter(obj => obj.isObstacle && obj.id !== this.id);
+        
+        // Posição desejada pelo mouse
+        let newCssLeft = event.clientX - sceneRect.left - this.offsetX;
+        let newX = Math.round(newCssLeft);
 
-        this.x = Math.round(newCssLeft);
-        this.y = Math.round(this.scene.clientHeight - newCssTop - this.altura);
+        let newCssTop = event.clientY - sceneRect.top - this.offsetY;
+        let newY = Math.round(this.scene.clientHeight - newCssTop - this.altura);
 
+        // Verifica colisão no eixo X
+        let canMoveX = true;
+        for (const obstacle of obstacles) {
+            const simulatedBounds = { x: newX, y: this.y, largura: this.largura, altura: this.altura };
+            if (this.collisionChecker(simulatedBounds, obstacle)) {
+                canMoveX = false;
+                break;
+            }
+        }
+        if (canMoveX) {
+            this.x = newX;
+        }
+
+        // Verifica colisão no eixo Y
+        let canMoveY = true;
+        for (const obstacle of obstacles) {
+            const simulatedBounds = { x: this.x, y: newY, largura: this.largura, altura: this.altura };
+            if (this.collisionChecker(simulatedBounds, obstacle)) {
+                canMoveY = false;
+                break;
+            }
+        }
+        if (canMoveY) {
+            this.y = newY;
+        }
+
+        // Garante que o objeto não saia da tela
         this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.largura));
         this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.altura));
-
+        
         this.coordinatesSpan.textContent = `Coordenadas (X, Y): ${this.x}, ${this.y}`;
+        
+        this.updateAppearance();
+    }
 
+    pararArrasto() {
+        if (!this.isDragging) return;
+        this.isDragging = false;
+        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
+        this.coordinatesSpan.textContent = `Coordenadas (X, Y): ...`;
+
+        // Salva a posição final no localStorage
         const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
         appData.objects = appData.objects.map(d => {
             if (d.id === this.id) {
@@ -130,14 +178,6 @@ export default class Retangulo {
             return d;
         });
         localStorage.setItem(this.storageKey, JSON.stringify(appData));
-        
-        this.updateAppearance();
-    }
-
-    pararArrasto() {
-        this.isDragging = false;
-        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
-        this.coordinatesSpan.textContent = `Coordenadas (X, Y): ...`;
     }
 }
 

@@ -1,122 +1,135 @@
-Documentação do Projeto 2D Interativo
-Este documento descreve a arquitetura, funcionalidades e fluxo de dados do projeto de cena 2D interativa. O objetivo é servir como uma referência técnica para futuras implementações e manutenções.
+# Documentação do Projeto 2D Interativo
 
-1. Visão Geral do Projeto
-O projeto consiste em uma página web (cena) que permite a criação, manipulação e persistência de objetos 2D. Os usuários podem adicionar objetos visuais (como Retângulos) e objetos de controle (como Sliders) para criar cenas interativas. Todas as configurações são salvas no localStorage do navegador, garantindo que o estado da cena seja preservado entre as sessões.
+Este documento descreve a arquitetura, funcionalidades e fluxo de dados do projeto de cena 2D interativa.
 
-2. Estrutura de Arquivos
-O projeto está organizado de forma modular para facilitar a manutenção e escalabilidade.
+## 1. Visão Geral
 
-index.html: A estrutura principal da página. Contém o contêiner da cena, os elementos da interface do usuário (botões, display de coordenadas) e o formulário modal para edição de objetos.
+O projeto é uma aplicação web que permite aos usuários criar, manipular e configurar objetos 2D (Retângulos, Círculos, Sliders) em uma área de trabalho (cena). As configurações da cena e dos objetos são salvas no `localStorage` do navegador para persistência.
 
-css/style.css: Contém os estilos personalizados da aplicação, incluindo a aparência da cena, dos objetos e do formulário.
+## 2. Estrutura de Arquivos
 
-js/main.js: O orquestrador principal da aplicação. É responsável por:
+- `index.html`: Arquivo principal da aplicação. Contém a estrutura da página, a cena, os botões de controle, o formulário modal para edição de objetos e o modal da tabela de gerenciamento.
+- `css/style.css`: Contém estilos CSS personalizados, complementando o framework Tailwind CSS.
+- `js/main.js`: O "cérebro" da aplicação. Orquestra a inicialização, o loop de jogo, a detecção de colisão, a criação de instâncias de objetos, e gerencia os modais (formulário e tabela).
+- `js/objects/`: Diretório que contém as classes de cada tipo de objeto.
+  - `Retangulo.js`: Define o comportamento e as propriedades de objetos retangulares.
+  - `Circulo.js`: Define o comportamento e as propriedades de objetos circulares.
+  - `Slider.js`: Define o comportamento de um objeto slider que pode controlar propriedades de outros objetos.
+- `GEMINI.md`: Este arquivo de documentação.
 
-Inicializar a cena e carregar todos os objetos do localStorage.
+## 3. Arquitetura e Fluxo de Dados
 
-Gerenciar o "game loop" para detecção de colisão entre retângulos.
+### 3.1. Inicialização (`init`)
 
-Controlar a lógica do formulário modal para todos os tipos de objetos.
+1.  O `main.js` é executado.
+2.  A função `init()` é chamada.
+3.  **Registro de Tipos de Objeto**: Um objeto `objectTypeRegistry` mapeia os tipos de objeto (ex: `'retangulo'`) para suas respectivas classes (`Retangulo`), IDs de campos de formulário e nomes de exibição.
+4.  **Botões Dinâmicos**: Os botões "Adicionar..." são gerados dinamicamente com base nas entradas do `objectTypeRegistry`.
+5.  **Carregamento de Dados**: Os dados da aplicação (tema e objetos) são lidos do `localStorage` através da `STORAGE_KEY`.
+6.  **Criação de Instâncias**: Para cada objeto de configuração encontrado no `localStorage`, a função `createObjectInstance()` é chamada. Ela usa o `objectTypeRegistry` para encontrar a classe correta e criar uma nova instância (ex: `new Retangulo(...)`).
+7.  **Loop Principal**: O `gameLoop()` é iniciado usando `requestAnimationFrame`.
 
-Instanciar os objetos na cena.
+### 3.2. O Loop Principal (`gameLoop`)
 
-js/objects/Retangulo.js: Define a classe Retangulo. Encapsula toda a lógica e as propriedades de um objeto retângulo.
+- Roda continuamente (~60 vezes por segundo).
+- **Detecção de Colisão**:
+  - Filtra todos os objetos que podem colidir.
+  - Compara cada par de objetos usando a função `checkAABBCollision`.
+  - Se uma colisão é detectada e o objeto está configurado para reagir (`reactsToCollision`), sua propriedade interna `isColliding` é definida como `true`.
+- **Atualização Visual**: Chama o método `updateAppearance()` de cada objeto para que eles possam reagir visualmente ao seu estado (ex: mudar de cor se `isColliding` for `true`).
 
-js/objects/Slider.js: (Novo) Define a classe Slider. Encapsula a lógica de um objeto de controle que pode manipular as propriedades de outros objetos na cena.
+### 3.3. Persistência de Dados (`localStorage`)
 
-3. Fluxo de Dados e Persistência
-A "fonte da verdade" para o estado da cena é o localStorage do navegador, salvo sob a chave interactive_2d_objects_v5.
+- Todos os dados persistentes são armazenados sob uma única chave no `localStorage` (`interactive_2d_app_data_v1`).
+- O valor é uma string JSON contendo um objeto com duas chaves principais: `theme` e `objects`.
 
-Armazenamento: Os objetos são armazenados como um array de objetos JSON. Cada objeto no array tem uma propriedade type que define se é um 'retangulo' ou um 'slider'.
+#### Estrutura do JSON
 
-Estrutura do JSON:
-
-Retângulo:
-
+```json
 {
-  "id": "retangulo_166...",
-  "type": "retangulo",
-  "nome": "Meu Retângulo",
-  "x": 100, "y": 150,
-  "largura": 150, "altura": 80,
-  "rotation": 0,
-  "reactsToCollision": true,
-  "collisionHandlers": {
-    "onCollision": { "cor": "rgba(255, 0, 0, 1)" },
-    "onNoCollision": { "cor": "rgba(0, 0, 255, 1)" }
-  }
+  "theme": {
+    "backgroundColor": "#374151"
+  },
+  "objects": [
+    {
+      "id": "retangulo_166...",
+      "type": "retangulo",
+      "nome": "Meu Retângulo",
+      "view": 0,
+      "x": 100,
+      "y": 150,
+      "largura": 150,
+      "altura": 80,
+      "rotation": 0.5,
+      "reactsToCollision": true,
+      "isObstacle": false,
+      "collisionHandlers": {
+        "onCollision": { "cor": "rgba(239, 68, 68, 1)" },
+        "onNoCollision": { "cor": "rgba(59, 130, 246, 1)" }
+      }
+    },
+    {
+      "id": "slider_167...",
+      "type": "slider",
+      "nome": "Controle de Largura",
+      "view": 1,
+      "x": 50,
+      "y": 300,
+      "largura": 300,
+      "altura": 50,
+      "targetId": "retangulo_166...",
+      "targetProperty": "largura",
+      "min": 50,
+      "max": 500
+    }
+  ]
 }
+```
 
-Slider (Novo):
+- `theme`: Armazena configurações globais de aparência, como a cor de fundo da cena.
+- `objects`: É um array de objetos, onde cada objeto representa a configuração de uma instância na cena.
 
-{
-  "id": "slider_166...",
-  "type": "slider",
-  "nome": "Controle de Largura",
-  "x": 300, "y": 200,
-  "largura": 300, "altura": 50,
-  "targetId": "retangulo_166...", // ID do objeto a ser controlado
-  "targetProperty": "largura", // Propriedade a ser controlada
-  "min": 50, // Valor mínimo do slider
-  "max": 500 // Valor máximo do slider
-}
+## 4. Funcionalidades e Classes de Objeto
 
-Carregamento e Interação:
+### 4.1. Funcionalidades Globais
 
-Ao iniciar, main.js lê o array do localStorage e cria as instâncias de Retangulo e Slider apropriadas.
+- **Adicionar Objetos**: Botões gerados dinamicamente abrem o formulário modal para criar novos objetos.
+- **Formulário Modal**: Um único formulário que se adapta para mostrar os campos relevantes para o tipo de objeto que está sendo criado ou editado.
+- **Arrastar e Soltar**: Objetos móveis podem ser arrastados pela cena. A posição é salva no `localStorage` ao soltar o objeto.
+- **Edição (Duplo Clique)**: Um duplo clique em qualquer objeto abre o formulário modal pré-preenchido com suas configurações.
+- **Gerenciador de Objetos**: Um modal de tabela exibe todos os objetos e permite a edição direta de suas propriedades.
+- **Personalização de Tema**: Um seletor de cor permite alterar a cor de fundo da cena, e a escolha é persistida.
 
-Quando um objeto é arrastado, sua classe (Retangulo ou Slider) atualiza diretamente o localStorage com suas novas coordenadas (X, Y).
+### 4.2. Classe `Retangulo.js`
 
-Quando o valor de um Slider é alterado, sua classe (Slider.js) encontra o objeto alvo no localStorage, atualiza a propriedade alvo (ex: largura) e, em seguida, chama o método update() da instância do objeto alvo para que a mudança seja refletida visualmente em tempo real.
+- **Propriedades**: `largura`, `altura`, `rotation`.
+- **Funcionalidades**: Pode ser arrastado, reage à colisão mudando de cor e suas propriedades podem ser controladas por um `Slider`. Pode opcionalmente ser configurado para atuar como um obstáculo, impedindo que outros objetos o atravessem.
 
-4. Principais Funcionalidades
-Criação de Objetos: Botões permitem adicionar novos Retângulos ou Sliders através de um formulário modal.
+### 4.3. Classe `Circulo.js`
 
-Edição: Um duplo clique em qualquer objeto abre o formulário para editar suas propriedades específicas.
+- **Propriedades**: `diametro`. (Internamente, usa `largura` e `altura` iguais ao diâmetro para a detecção de colisão AABB).
+- **Funcionalidades**: Similar ao `Retangulo`. Pode ser arrastado, reage à colisão e pode ser controlado por um `Slider`. Visualmente é renderizado com `border-radius: 50%`. Pode opcionalmente ser configurado para atuar como um obstáculo.
 
-Persistência: O estado da cena é salvo e recarregado a cada visita.
+### 4.4. Classe `Slider.js`
 
-Drag and Drop: Todos os objetos podem ser arrastados livremente.
+- **Propriedades**: `targetId`, `targetProperty`, `min`, `max`.
+- **Funcionalidades**: Exibe um controle deslizante. Ao ser alterado, ele modifica em tempo real a propriedade (`targetProperty`) do objeto alvo (`targetId`). Pode ser arrastado pela cena.
 
-Detecção de Colisão: O gameLoop verifica a colisão entre Retângulos.
+## 5. Correções Recentes (01/10/2025)
 
-Controle de Propriedades via Slider (Novo):
+- **Correção de Bug Crítico no Formulário:**
+  - **Problema:** Um erro de digitação e uma `div` mal posicionada no `index.html` faziam com que o formulário de criação/edição de objetos falhasse ao tentar adicionar um `Slider`, causando um erro (`Cannot set properties of null`) e desconfigurando o formulário para `Retangulo` e `Círculo`.
+  - **Solução:** O HTML do formulário foi reestruturado, garantindo que todos os campos, especialmente os do `Slider` (`target-object`), existam e estejam corretamente aninhados. A função `openForm` em `main.js` também foi ajustada para garantir que os campos corretos sejam exibidos para cada tipo de objeto.
 
-Um objeto Slider pode ser vinculado a qualquer Retângulo na cena.
+- **Implementação da Funcionalidade "Obstáculo":**
+  - **Problema:** A lógica para a nova funcionalidade "obstáculo" estava incompleta e causando erros.
+  - **Solução:**
+    - O formulário em `index.html` agora inclui um checkbox `is-obstacle`.
+    - A função `getConfigFromForm` em `main.js` foi atualizada para ler o estado deste checkbox.
+    - A função `openForm` agora define o valor do checkbox ao editar um objeto existente ou um valor padrão ao criar um novo.
 
-Ele pode controlar propriedades numéricas como x, y, largura, altura e rotation.
-
-A alteração do valor no slider atualiza a propriedade do objeto alvo em tempo real.
-
-5. Análise dos Arquivos e Funções Chave
-js/main.js
-openForm(config, type): Lógica aprimorada para exibir campos específicos para 'retangulo' ou 'slider'.
-
-populateTargetObjectDropdown(): (Novo) Popula a lista de objetos alvo no formulário do slider com todos os retângulos disponíveis.
-
-createRetanguloInstance() / createSliderInstance(): Funções para instanciar os respectivos objetos.
-
-js/objects/Retangulo.js
-update(config): Método central que permite que suas propriedades sejam alteradas dinamicamente, essencial para a interação com o Slider.
-
-js/objects/Slider.js (Novo)
-constructor(..., allObjects, ...): Recebe a lista de todas as instâncias de objetos da cena para poder encontrar seu alvo.
-
-criarElemento(): Constrói a estrutura HTML do objeto, incluindo o <input type="range">.
-
-update(config): Configura as propriedades do slider (min, max, alvo, etc.) e chama updateAppearance.
-
-updateAppearance(): Sincroniza o estado visual do slider (label, min/max, valor atual) com suas propriedades. Ele lê o valor atual da propriedade do objeto alvo para definir a posição inicial do controle deslizante.
-
-handleSliderInput(): A função principal da interatividade. É disparada pelo evento input do slider. Ela:
-
-Encontra a instância do objeto alvo.
-
-Lê os dados do localStorage.
-
-Modifica a propriedade alvo no objeto de dados.
-
-Salva o array de dados completo de volta no localStorage.
-
-Chama o método update() na instância do objeto alvo para aplicar a mudança visual instantaneamente.
+- **Refatoração e Injeção de Dependência:**
+  - **Problema:** As classes `Retangulo` e `Circulo` recebiam dependências (`allObjectInstances`, `collisionChecker`) em seus construtores, mas a lógica de arrasto com obstáculos não estava funcionando corretamente e o acoplamento era alto.
+  - **Solução:**
+    - Os construtores de `Retangulo` e `Circulo` foram simplificados, removendo os parâmetros extras.
+    - A função `createObjectInstance` em `main.js` foi modificada para "injetar" as dependências (`allObjects` e `checkAABBCollision`) diretamente nas instâncias dos objetos após sua criação. Isso desacoplou as classes e garantiu que a lógica de detecção de colisão com obstáculos funcione como esperado durante o arrasto.
