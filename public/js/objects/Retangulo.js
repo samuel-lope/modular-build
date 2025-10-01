@@ -19,6 +19,8 @@ export default class Retangulo {
         this.isDragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
+        this.lastTap = 0;
+        this.dragged = false;
 
         // Propriedades de estado
         this.isColliding = false;
@@ -57,26 +59,30 @@ export default class Retangulo {
         this.elementoHTML = document.createElement('div');
         this.elementoHTML.classList.add('draggable', 'object-shape');
 
-        // Adiciona listeners para mouse e toque
+        // Listeners para mouse
         this.elementoHTML.addEventListener('mousedown', this.iniciarArrasto.bind(this));
+        this.elementoHTML.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+        
+        // Listeners para toque
         this.elementoHTML.addEventListener('touchstart', this.iniciarArrasto.bind(this), { passive: false });
         
+        // Listeners globais
         document.addEventListener('mousemove', this.arrastar.bind(this));
         document.addEventListener('touchmove', this.arrastar.bind(this), { passive: false });
         
         document.addEventListener('mouseup', this.pararArrasto.bind(this));
         document.addEventListener('touchend', this.pararArrasto.bind(this));
 
-        this.elementoHTML.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
-            const currentData = appData.objects.find(d => d.id === this.id);
-            if (currentData) {
-                this.openFormCallback(currentData, this.type);
-            }
-        });
-
         this.scene.appendChild(this.elementoHTML);
+    }
+    
+    handleDoubleClick(e) {
+        e.stopPropagation();
+        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
+        const currentData = appData.objects.find(d => d.id === this.id);
+        if (currentData) {
+            this.openFormCallback(currentData, this.type);
+        }
     }
 
     /**
@@ -119,6 +125,7 @@ export default class Retangulo {
     iniciarArrasto(event) {
         if (event.type === 'touchstart') event.preventDefault();
         this.isDragging = true;
+        this.dragged = false; // Reseta a flag de arrasto
         this.elementoHTML.style.zIndex = 1000;
         
         const coords = this.getEventCoords(event);
@@ -131,6 +138,7 @@ export default class Retangulo {
         if (!this.isDragging) return;
         if (event.type === 'touchmove') event.preventDefault();
         
+        this.dragged = true; // Marca que o objeto foi realmente arrastado
         const coords = this.getEventCoords(event);
         const sceneRect = this.scene.getBoundingClientRect();
         const newCssLeft = coords.x - sceneRect.left - this.offsetX;
@@ -156,10 +164,23 @@ export default class Retangulo {
         this.updateAppearance();
     }
 
-    pararArrasto() {
+    pararArrasto(event) {
         if (!this.isDragging) return;
+
+        // Lógica de Toque Duplo para mobile
+        if (event.type === 'touchend' && !this.dragged) {
+            const now = Date.now();
+            if (now - this.lastTap < 300) { // Limite de 300ms para toque duplo
+                this.handleDoubleClick(event);
+            }
+            this.lastTap = now;
+        }
+        
         this.isDragging = false;
         this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
-        this.coordinatesSpan.textContent = `X, Y: ...`;
+        
+        if (this.coordinatesSpan) {
+            this.coordinatesSpan.textContent = `X, Y: ...`;
+        }
     }
 }
