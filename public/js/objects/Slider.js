@@ -21,7 +21,9 @@ export default class Slider {
         this.isDragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
-        this.view = 0; // Ordem de exibição
+        this.view = 0;
+        this.lastTap = 0;
+        this.dragged = false;
 
         this.criarElemento();
         this.update(config);
@@ -65,15 +67,19 @@ export default class Slider {
 
         this.elementoHTML.appendChild(this.label);
         this.elementoHTML.appendChild(this.sliderInput);
-
-        // A lógica de arrastar só se aplica ao container, não ao controle do slider.
+        
+        // Listeners de mouse
         this.elementoHTML.addEventListener('mousedown', (e) => {
             if (e.target.type !== 'range') this.iniciarArrasto(e);
         });
+        this.elementoHTML.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+
+        // Listeners de toque
         this.elementoHTML.addEventListener('touchstart', (e) => {
             if (e.target.type !== 'range') this.iniciarArrasto(e);
         }, { passive: false });
         
+        // Listeners globais
         document.addEventListener('mousemove', this.arrastar.bind(this));
         document.addEventListener('touchmove', this.arrastar.bind(this), { passive: false });
         
@@ -81,17 +87,17 @@ export default class Slider {
         document.addEventListener('touchend', this.pararArrasto.bind(this));
         
         this.sliderInput.addEventListener('input', this.handleSliderInput.bind(this));
-        
-        this.elementoHTML.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
-            const currentData = appData.objects.find(d => d.id === this.id);
-            if (currentData) {
-                this.openFormCallback(currentData, this.type);
-            }
-        });
 
         this.scene.appendChild(this.elementoHTML);
+    }
+
+    handleDoubleClick(e) {
+        e.stopPropagation();
+        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
+        const currentData = appData.objects.find(d => d.id === this.id);
+        if (currentData) {
+            this.openFormCallback(currentData, this.type);
+        }
     }
 
     /**
@@ -169,6 +175,7 @@ export default class Slider {
     iniciarArrasto(event) {
         if (event.type === 'touchstart') event.preventDefault();
         this.isDragging = true;
+        this.dragged = false;
         this.elementoHTML.style.zIndex = 1000;
         
         const coords = this.getEventCoords(event);
@@ -180,7 +187,8 @@ export default class Slider {
     arrastar(event) {
         if (!this.isDragging) return;
         if (event.type === 'touchmove') event.preventDefault();
-        
+
+        this.dragged = true;
         const coords = this.getEventCoords(event);
         const sceneRect = this.scene.getBoundingClientRect();
         const newCssLeft = coords.x - sceneRect.left - this.offsetX;
@@ -204,8 +212,17 @@ export default class Slider {
         this.updateAppearance();
     }
 
-    pararArrasto() {
+    pararArrasto(event) {
         if (!this.isDragging) return;
+
+        if (event.type === 'touchend' && !this.dragged) {
+            const now = Date.now();
+            if (now - this.lastTap < 300) {
+                this.handleDoubleClick(event);
+            }
+            this.lastTap = now;
+        }
+
         this.isDragging = false;
         this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
     }
