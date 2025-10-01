@@ -8,18 +8,12 @@ export default class Circulo {
      * @param {object} config - O objeto de configuração inicial.
      * @param {Function} openFormCallback - Callback para abrir o formulário de edição.
      * @param {string} storageKey - A chave usada para o localStorage.
-     * @param {Array} allObjectInstances - Referência ao array com todas as instâncias de objetos.
-     * @param {Function} collisionChecker - A função que verifica colisão AABB.
      */
     constructor(scene, coordinatesSpan, config, openFormCallback, storageKey) {
         this.scene = scene;
         this.coordinatesSpan = coordinatesSpan;
         this.openFormCallback = openFormCallback;
         this.storageKey = storageKey;
-
-        // Removido: allObjectInstances e collisionChecker não são mais passados aqui
-        this.allObjectInstances = null; // Será injetado depois se necessário
-        this.collisionChecker = null; // Será injetado depois se necessário
         
         this.elementoHTML = null;
         this.isDragging = false;
@@ -29,7 +23,6 @@ export default class Circulo {
         // Propriedades de estado
         this.isColliding = false;
         this.view = 0; // Ordem de exibição
-        this.isObstacle = false;
 
         this.criarElemento();
         this.update(config); // Aplica a configuração inicial
@@ -42,7 +35,6 @@ export default class Circulo {
     update(config) {
         Object.assign(this, config);
         this.view = config.view || 0; // Garante que a view seja definida
-        this.isObstacle = config.isObstacle || false;
         
         // Para a lógica de colisão (AABB), tratamos largura e altura como o diâmetro.
         this.largura = this.diametro;
@@ -52,6 +44,18 @@ export default class Circulo {
     }
     
     /**
+     * Extrai as coordenadas de um evento de mouse ou toque.
+     * @param {MouseEvent | TouchEvent} event - O evento do DOM.
+     * @returns {{x: number, y: number}} - As coordenadas do cliente.
+     */
+    getEventCoords(event) {
+        if (event.touches && event.touches.length > 0) {
+            return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        }
+        return { x: event.clientX, y: event.clientY };
+    }
+
+    /**
      * Cria o elemento DIV no DOM que representa o círculo.
      */
     criarElemento() {
@@ -59,9 +63,15 @@ export default class Circulo {
         this.elementoHTML.classList.add('draggable', 'object-shape');
         this.elementoHTML.style.borderRadius = '50%';
 
+        // Adiciona listeners para mouse e toque
         this.elementoHTML.addEventListener('mousedown', this.iniciarArrasto.bind(this));
+        this.elementoHTML.addEventListener('touchstart', this.iniciarArrasto.bind(this), { passive: false });
+
         document.addEventListener('mousemove', this.arrastar.bind(this));
+        document.addEventListener('touchmove', this.arrastar.bind(this), { passive: false });
+
         document.addEventListener('mouseup', this.pararArrasto.bind(this));
+        document.addEventListener('touchend', this.pararArrasto.bind(this));
 
         this.elementoHTML.addEventListener('dblclick', (e) => {
             e.stopPropagation();
@@ -110,69 +120,33 @@ export default class Circulo {
 
     // --- LÓGICA DE DRAG AND DROP ---
     iniciarArrasto(event) {
+        if (event.type === 'touchstart') event.preventDefault();
         this.isDragging = true;
         this.elementoHTML.style.zIndex = 1000;
+        
+        const coords = this.getEventCoords(event);
         const rect = this.elementoHTML.getBoundingClientRect();
-        this.offsetX = event.clientX - rect.left;
-        this.offsetY = event.clientY - rect.top;
+        this.offsetX = coords.x - rect.left;
+        this.offsetY = coords.y - rect.top;
     }
 
     arrastar(event) {
         if (!this.isDragging) return;
-        event.preventDefault();
+        if (event.type === 'touchmove') event.preventDefault();
 
+        const coords = this.getEventCoords(event);
         const sceneRect = this.scene.getBoundingClientRect();
-        const obstacles = this.allObjectInstances.filter(obj => obj.isObstacle && obj.id !== this.id);
-        
-        // Posição desejada pelo mouse
-        let newCssLeft = event.clientX - sceneRect.left - this.offsetX;
-        let newX = Math.round(newCssLeft);
+        const newCssLeft = coords.x - sceneRect.left - this.offsetX;
+        const newCssTop = coords.y - sceneRect.top - this.offsetY;
 
-        let newCssTop = event.clientY - sceneRect.top - this.offsetY;
-        let newY = Math.round(this.scene.clientHeight - newCssTop - this.diametro);
+        this.x = Math.round(newCssLeft);
+        this.y = Math.round(this.scene.clientHeight - newCssTop - this.diametro);
 
-        // Verifica colisão no eixo X
-        let canMoveX = true;
-        for (const obstacle of obstacles) {
-            const simulatedBounds = { x: newX, y: this.y, largura: this.diametro, altura: this.diametro };
-            if (this.collisionChecker(simulatedBounds, obstacle)) {
-                canMoveX = false;
-                break;
-            }
-        }
-        if (canMoveX) {
-            this.x = newX;
-        }
-
-        // Verifica colisão no eixo Y
-        let canMoveY = true;
-        for (const obstacle of obstacles) {
-            const simulatedBounds = { x: this.x, y: newY, largura: this.diametro, altura: this.diametro };
-            if (this.collisionChecker(simulatedBounds, obstacle)) {
-                canMoveY = false;
-                break;
-            }
-        }
-        if (canMoveY) {
-            this.y = newY;
-        }
-
-        // Garante que o objeto não saia da tela
         this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.diametro));
         this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.diametro));
 
-        this.coordinatesSpan.textContent = `Coordenadas (X, Y): ${this.x}, ${this.y}`;
-        
-        this.updateAppearance();
-    }
+        this.coordinatesSpan.textContent = `X, Y: ${this.x}, ${this.y}`;
 
-    pararArrasto() {
-        if (!this.isDragging) return;
-        this.isDragging = false;
-        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
-        this.coordinatesSpan.textContent = `Coordenadas (X, Y): ...`;
-
-        // Salva a posição final no localStorage
         const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
         appData.objects = appData.objects.map(d => {
             if (d.id === this.id) {
@@ -181,6 +155,14 @@ export default class Circulo {
             return d;
         });
         localStorage.setItem(this.storageKey, JSON.stringify(appData));
+        
+        this.updateAppearance();
+    }
+
+    pararArrasto() {
+        if (!this.isDragging) return;
+        this.isDragging = false;
+        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
+        this.coordinatesSpan.textContent = `X, Y: ...`;
     }
 }
-
