@@ -22,19 +22,28 @@
         </div>
 
         <!-- Controles da UI Otimizados para Mobile (na parte inferior) -->
-        <div id="ui-controls" class="absolute bottom-0 left-0 right-0 p-2 bg-gray-900 bg-opacity-70 backdrop-blur-sm">
-            <div class="flex justify-center flex-wrap items-center gap-2 mb-2" id="add-buttons-container">
-                <!-- Botões de adicionar objetos serão gerados dinamicamente -->
-            </div>
-            <div class="flex justify-between items-center gap-2 text-xs">
-                <button id="manage-objects-btn" class="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg shadow-md transition-colors font-semibold flex-grow text-center">
-                    Gerenciar
-                </button>
-                <div class="bg-gray-800 rounded-lg px-2 py-1 flex items-center space-x-2">
-                    <label for="bg-color-picker" class="font-medium">Fundo:</label>
-                    <input type="color" id="bg-color-picker" class="w-6 h-6">
+        <div id="ui-controls" class="absolute bottom-0 left-0 right-0 p-2 bg-gray-900 bg-opacity-70 backdrop-blur-sm border-t border-gray-700">
+            <div class="flex justify-around items-center gap-2">
+                <!-- Container para os botões de adicionar objetos (ícones) -->
+                <div id="add-buttons-container" class="flex justify-center items-center gap-2">
+                    <!-- Botões de ícones serão gerados dinamicamente aqui -->
                 </div>
-                 <span id="coords" class="bg-gray-800 rounded-lg px-2 py-2 text-gray-400 truncate">X, Y: ...</span>
+
+                <div class="h-8 border-l border-gray-600"></div>
+
+                <!-- Botão de Gerenciar (Ícone) -->
+                <button id="manage-objects-btn" class="w-12 h-12 flex items-center justify-center text-gray-300 hover:text-white transition-colors">
+                     <!-- O ícone será inserido via JS -->
+                </button>
+                
+                 <!-- Seletor de Cor e Coordenadas -->
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center space-x-2 bg-gray-800 rounded-lg p-2">
+                        <label for="bg-color-picker" class="font-medium text-sm">Fundo:</label>
+                        <input type="color" id="bg-color-picker" class="w-6 h-6">
+                    </div>
+                    <span id="coords" class="bg-gray-800 rounded-lg px-2 py-2 text-gray-400 text-xs truncate">X, Y: ...</span>
+                </div>
             </div>
         </div>
     </div>
