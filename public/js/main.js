@@ -2,18 +2,41 @@ import Retangulo from './objects/Retangulo.js';
 import Circulo from './objects/Circulo.js';
 import Slider from './objects/Slider.js';
 
+// --- REGISTRO DE TIPOS DE OBJETO ---
+const objectTypeRegistry = {
+    'retangulo': {
+        class: Retangulo,
+        displayName: 'Retângulo',
+        buttonClass: 'bg-blue-600 hover:bg-blue-700',
+        formFieldsId: 'rect-fields',
+        commonFieldsId: 'shape-common-fields'
+    },
+    'circulo': {
+        class: Circulo,
+        displayName: 'Círculo',
+        buttonClass: 'bg-green-600 hover:bg-green-700',
+        formFieldsId: 'circle-fields',
+        commonFieldsId: 'shape-common-fields'
+    },
+    'slider': {
+        class: Slider,
+        displayName: 'Slider',
+        buttonClass: 'bg-purple-600 hover:bg-purple-700',
+        formFieldsId: 'slider-fields',
+        commonFieldsId: null
+    }
+};
+
 // --- CONFIGURAÇÃO INICIAL ---
 const scene = document.getElementById('scene');
-const coordinatesSpan = document.querySelector('#ui-controls span');
+const coordinatesSpan = document.getElementById('coords');
 const bgColorPicker = document.getElementById('bg-color-picker');
+const addButtonsContainer = document.getElementById('add-buttons-container');
 
 // --- ELEMENTOS DO FORMULÁRIO ---
 const formContainer = document.getElementById('form-container');
 const objectForm = document.getElementById('object-form');
 const formTitle = document.getElementById('form-title');
-const addRectBtn = document.getElementById('add-rect-btn');
-const addCircleBtn = document.getElementById('add-circle-btn');
-const addSliderBtn = document.getElementById('add-slider-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const deleteBtn = document.getElementById('delete-btn');
 const duplicateBtn = document.getElementById('duplicate-btn');
@@ -25,12 +48,6 @@ const manageObjectsBtn = document.getElementById('manage-objects-btn');
 const tableModalContainer = document.getElementById('table-modal-container');
 const closeTableBtn = document.getElementById('close-table-btn');
 const objectsTable = document.getElementById('objects-table');
-
-// Grupos de campos
-const rectFields = document.getElementById('rect-fields');
-const circleFields = document.getElementById('circle-fields');
-const shapeCommonFields = document.getElementById('shape-common-fields');
-const sliderFields = document.getElementById('slider-fields');
 
 // --- ESTADO DA APLICAÇÃO ---
 let isCollisionDetectionActive = true;
@@ -76,7 +93,6 @@ function checkAABBCollision(objA, objB) {
         objA.y + alturaA > objB.y
     );
 }
-
 
 /**
  * Loop principal da aplicação.
@@ -128,15 +144,22 @@ function openForm(config = null, type) {
     objectForm.reset();
     objectTypeInput.value = type;
 
-    rectFields.classList.add('hidden');
-    circleFields.classList.add('hidden');
-    shapeCommonFields.classList.add('hidden');
-    sliderFields.classList.add('hidden');
+    // Esconde todos os grupos de campos específicos
+    Object.values(objectTypeRegistry).forEach(typeInfo => {
+        if(typeInfo.formFieldsId) document.getElementById(typeInfo.formFieldsId).classList.add('hidden');
+        if(typeInfo.commonFieldsId) document.getElementById(typeInfo.commonFieldsId).classList.add('hidden');
+    });
 
     const { objects: objectsData } = loadAppDataFromStorage();
+    const typeInfo = objectTypeRegistry[type];
+    if (!typeInfo) return;
+
+    // Mostra os campos relevantes para o tipo de objeto
+    if (typeInfo.formFieldsId) document.getElementById(typeInfo.formFieldsId).classList.remove('hidden');
+    if (typeInfo.commonFieldsId) document.getElementById(typeInfo.commonFieldsId).classList.remove('hidden');
 
     if (config) { // Modo Edição
-        formTitle.textContent = `Editar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        formTitle.textContent = `Editar ${typeInfo.displayName}`;
         objectIdInput.value = config.id;
         document.getElementById('object-name').value = config.nome;
         document.getElementById('object-view').value = config.view || 0;
@@ -145,7 +168,7 @@ function openForm(config = null, type) {
         deleteBtn.classList.remove('hidden');
         duplicateBtn.classList.remove('hidden');
     } else { // Modo Criação
-        formTitle.textContent = `Adicionar Novo ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        formTitle.textContent = `Adicionar Novo ${typeInfo.displayName}`;
         objectIdInput.value = `${type}_${Date.now()}`;
         document.getElementById('object-view').value = objectsData.length;
         document.getElementById('x').value = Math.round(Math.random() * 200 + 50);
@@ -153,9 +176,9 @@ function openForm(config = null, type) {
         deleteBtn.classList.add('hidden');
         duplicateBtn.classList.add('hidden');
     }
-
+    
+    // Lógica específica para preencher valores do formulário
     if (type === 'retangulo' || type === 'circulo') {
-        shapeCommonFields.classList.remove('hidden');
         if (config) {
             document.getElementById('cor').value = config.collisionHandlers.onNoCollision.cor;
             document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
@@ -168,7 +191,6 @@ function openForm(config = null, type) {
     }
     
     if (type === 'retangulo') {
-        rectFields.classList.remove('hidden');
         if (config) {
             document.getElementById('largura').value = config.largura;
             document.getElementById('altura').value = config.altura;
@@ -180,7 +202,6 @@ function openForm(config = null, type) {
              document.getElementById('rotation').value = 0;
         }
     } else if (type === 'circulo') {
-        circleFields.classList.remove('hidden');
         if (config) {
             document.getElementById('diametro').value = config.diametro;
         } else {
@@ -188,7 +209,6 @@ function openForm(config = null, type) {
             document.getElementById('diametro').value = 100;
         }
     } else if (type === 'slider') {
-        sliderFields.classList.remove('hidden');
         populateTargetObjectDropdown(config ? config.targetId : null);
         if (config) {
             document.getElementById('target-property').value = config.targetProperty;
@@ -270,13 +290,7 @@ function handleFormSubmit(event) {
         }
     } else {
         appData.objects.push(config);
-        if (config.type === 'retangulo') {
-            createRetanguloInstance(config);
-        } else if (config.type === 'circulo') {
-            createCirculoInstance(config);
-        } else if (config.type === 'slider') {
-            createSliderInstance(config);
-        }
+        createObjectInstance(config);
     }
     
     saveAppDataToStorage(appData);
@@ -311,9 +325,7 @@ function handleDuplicate() {
     appData.objects.push(newConfig);
     saveAppDataToStorage(appData);
     
-    if (newConfig.type === 'retangulo') createRetanguloInstance(newConfig);
-    else if (newConfig.type === 'circulo') createCirculoInstance(newConfig);
-    else if (newConfig.type === 'slider') createSliderInstance(newConfig);
+    createObjectInstance(newConfig);
 
     closeForm();
 }
@@ -434,39 +446,44 @@ function handleTableCellEdit(event) {
 
 // --- INICIALIZAÇÃO E CRIAÇÃO DE INSTÂNCIAS ---
 
-function createRetanguloInstance(config) {
-    const newRect = new Retangulo(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
-    allObjects.push(newRect);
+function createObjectInstance(config) {
+    const typeInfo = objectTypeRegistry[config.type];
+    if (!typeInfo) return;
+
+    let newObject;
+    const ObjectClass = typeInfo.class;
+
+    if (config.type === 'slider') {
+        newObject = new ObjectClass(scene, config, allObjects, openForm, STORAGE_KEY);
+    } else {
+        newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
+    }
+    allObjects.push(newObject);
 }
 
-function createCirculoInstance(config) {
-    const newCircle = new Circulo(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
-    allObjects.push(newCircle);
-}
-
-function createSliderInstance(config) {
-    const newSlider = new Slider(scene, config, allObjects, openForm, STORAGE_KEY);
-    allObjects.push(newSlider);
+function generateAddButtons() {
+    for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
+        const button = document.createElement('button');
+        button.textContent = `Adicionar ${typeInfo.displayName}`;
+        button.className = `px-4 py-2 rounded-lg shadow-md transition-colors font-semibold ${typeInfo.buttonClass}`;
+        button.addEventListener('click', () => openForm(null, type));
+        addButtonsContainer.prepend(button);
+    }
 }
 
 function init() {
     const appData = loadAppDataFromStorage();
+    
+    generateAddButtons();
     
     // Aplica o tema
     scene.style.backgroundColor = appData.theme.backgroundColor;
     bgColorPicker.value = appData.theme.backgroundColor;
 
     // Carrega os objetos
-    appData.objects.forEach(data => {
-        if (data.type === 'retangulo') createRetanguloInstance(data);
-        else if (data.type === 'circulo') createCirculoInstance(data);
-        else if (data.type === 'slider') createSliderInstance(data);
-    });
+    appData.objects.forEach(data => createObjectInstance(data));
     
     // Configura os event listeners
-    addRectBtn.addEventListener('click', () => openForm(null, 'retangulo'));
-    addCircleBtn.addEventListener('click', () => openForm(null, 'circulo'));
-    addSliderBtn.addEventListener('click', () => openForm(null, 'slider'));
     cancelBtn.addEventListener('click', closeForm);
     deleteBtn.addEventListener('click', handleDelete);
     duplicateBtn.addEventListener('click', handleDuplicate);
