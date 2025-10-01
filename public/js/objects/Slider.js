@@ -38,6 +38,18 @@ export default class Slider {
     }
 
     /**
+     * Extrai as coordenadas de um evento de mouse ou toque.
+     * @param {MouseEvent | TouchEvent} event - O evento do DOM.
+     * @returns {{x: number, y: number}} - As coordenadas do cliente.
+     */
+    getEventCoords(event) {
+        if (event.touches && event.touches.length > 0) {
+            return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        }
+        return { x: event.clientX, y: event.clientY };
+    }
+
+    /**
      * Cria o elemento DIV no DOM que representa o slider.
      */
     criarElemento() {
@@ -54,13 +66,19 @@ export default class Slider {
         this.elementoHTML.appendChild(this.label);
         this.elementoHTML.appendChild(this.sliderInput);
 
+        // A lógica de arrastar só se aplica ao container, não ao controle do slider.
         this.elementoHTML.addEventListener('mousedown', (e) => {
-            if (e.target.type !== 'range') { // Só arrasta se não for o controle do slider
-                this.iniciarArrasto(e);
-            }
+            if (e.target.type !== 'range') this.iniciarArrasto(e);
         });
+        this.elementoHTML.addEventListener('touchstart', (e) => {
+            if (e.target.type !== 'range') this.iniciarArrasto(e);
+        }, { passive: false });
+        
         document.addEventListener('mousemove', this.arrastar.bind(this));
+        document.addEventListener('touchmove', this.arrastar.bind(this), { passive: false });
+        
         document.addEventListener('mouseup', this.pararArrasto.bind(this));
+        document.addEventListener('touchend', this.pararArrasto.bind(this));
         
         this.sliderInput.addEventListener('input', this.handleSliderInput.bind(this));
         
@@ -149,20 +167,24 @@ export default class Slider {
 
     // --- LÓGICA DE DRAG AND DROP ---
     iniciarArrasto(event) {
+        if (event.type === 'touchstart') event.preventDefault();
         this.isDragging = true;
         this.elementoHTML.style.zIndex = 1000;
+        
+        const coords = this.getEventCoords(event);
         const rect = this.elementoHTML.getBoundingClientRect();
-        this.offsetX = event.clientX - rect.left;
-        this.offsetY = event.clientY - rect.top;
+        this.offsetX = coords.x - rect.left;
+        this.offsetY = coords.y - rect.top;
     }
 
     arrastar(event) {
         if (!this.isDragging) return;
-        event.preventDefault();
-
+        if (event.type === 'touchmove') event.preventDefault();
+        
+        const coords = this.getEventCoords(event);
         const sceneRect = this.scene.getBoundingClientRect();
-        const newCssLeft = event.clientX - sceneRect.left - this.offsetX;
-        const newCssTop = event.clientY - sceneRect.top - this.offsetY;
+        const newCssLeft = coords.x - sceneRect.left - this.offsetX;
+        const newCssTop = coords.y - sceneRect.top - this.offsetY;
 
         this.x = Math.round(newCssLeft);
         this.y = Math.round(this.scene.clientHeight - newCssTop - this.altura);
@@ -183,8 +205,8 @@ export default class Slider {
     }
 
     pararArrasto() {
+        if (!this.isDragging) return;
         this.isDragging = false;
         this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
     }
 }
-
