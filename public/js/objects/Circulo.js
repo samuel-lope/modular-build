@@ -1,6 +1,5 @@
 /**
  * Classe que define um objeto Círculo 2D.
- * É funcionalmente similar ao Retângulo, mas renderizado como um círculo.
  */
 export default class Circulo {
     /**
@@ -23,6 +22,7 @@ export default class Circulo {
 
         // Propriedades de estado
         this.isColliding = false;
+        this.view = 0; // Ordem de exibição
 
         this.criarElemento();
         this.update(config); // Aplica a configuração inicial
@@ -34,6 +34,7 @@ export default class Circulo {
      */
     update(config) {
         Object.assign(this, config);
+        this.view = config.view || 0; // Garante que a view seja definida
         
         // Para a lógica de colisão (AABB), tratamos largura e altura como o diâmetro.
         this.largura = this.diametro;
@@ -48,16 +49,14 @@ export default class Circulo {
     criarElemento() {
         this.elementoHTML = document.createElement('div');
         this.elementoHTML.classList.add('draggable', 'object-shape');
-        this.elementoHTML.style.borderRadius = '50%'; // A mágica acontece aqui!
+        this.elementoHTML.style.borderRadius = '50%';
 
-        // Adiciona os listeners de eventos
         this.elementoHTML.addEventListener('mousedown', this.iniciarArrasto.bind(this));
         document.addEventListener('mousemove', this.arrastar.bind(this));
         document.addEventListener('mouseup', this.pararArrasto.bind(this));
 
-        // Listener para abrir o formulário de edição
         this.elementoHTML.addEventListener('dblclick', (e) => {
-            e.stopPropagation(); // Impede que o evento se propague para a cena
+            e.stopPropagation();
             const objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
             const currentData = objectsData.find(d => d.id === this.id);
             if (currentData) {
@@ -69,24 +68,22 @@ export default class Circulo {
     }
 
     /**
-     * Atualiza a aparência visual (posição, tamanho, cor) do círculo.
+     * Atualiza a aparência visual (posição, tamanho, cor, z-index) do círculo.
      */
     updateAppearance() {
         if (!this.elementoHTML) return;
 
         this.elementoHTML.id = this.id;
+        this.elementoHTML.style.zIndex = this.view;
 
-        // Posição
         const cssLeft = this.x;
         const cssTop = this.scene.clientHeight - this.y - this.diametro;
         this.elementoHTML.style.left = `${cssLeft}px`;
         this.elementoHTML.style.top = `${cssTop}px`;
         
-        // Tamanho
         this.elementoHTML.style.width = `${this.diametro}px`;
         this.elementoHTML.style.height = `${this.diametro}px`;
         
-        // Cor baseada no estado de colisão
         const corAtual = this.isColliding 
             ? this.collisionHandlers.onCollision.cor
             : this.collisionHandlers.onNoCollision.cor;
@@ -120,17 +117,14 @@ export default class Circulo {
         const newCssLeft = event.clientX - sceneRect.left - this.offsetX;
         const newCssTop = event.clientY - sceneRect.top - this.offsetY;
 
-        // Converte de volta para o sistema de coordenadas da cena
         this.x = Math.round(newCssLeft);
         this.y = Math.round(this.scene.clientHeight - newCssTop - this.diametro);
 
-        // Garante que o objeto não saia da cena
         this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.diametro));
         this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.diametro));
 
         this.coordinatesSpan.textContent = `Coordenadas (X, Y): ${this.x}, ${this.y}`;
 
-        // Salva a nova posição no localStorage
         const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
             if (d.id === this.id) {
                 return { ...d, x: this.x, y: this.y };
@@ -144,7 +138,7 @@ export default class Circulo {
 
     pararArrasto() {
         this.isDragging = false;
-        this.elementoHTML.style.zIndex = 1;
+        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
         this.coordinatesSpan.textContent = `Coordenadas (X, Y): ...`;
     }
 }

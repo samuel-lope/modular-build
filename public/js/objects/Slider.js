@@ -1,29 +1,27 @@
 /**
- * Classe que define um objeto Slider 2D.
+ * Classe que define um objeto Slider 2D para controlar propriedades de outros objetos.
  */
 export default class Slider {
     /**
      * @param {HTMLElement} scene - O elemento do palco.
-     * @param {object} config - O objeto de configuração.
-     * @param {Array} allObjects - Referência ao array de todas as instâncias de objetos.
+     * @param {object} config - O objeto de configuração inicial.
+     * @param {Array} allObjectInstances - Array com todas as instâncias de objetos na cena.
      * @param {Function} openFormCallback - Callback para abrir o formulário de edição.
      * @param {string} storageKey - A chave usada para o localStorage.
      */
-    constructor(scene, config, allObjects, openFormCallback, storageKey) {
+    constructor(scene, config, allObjectInstances, openFormCallback, storageKey) {
         this.scene = scene;
-        this.allObjects = allObjects;
+        this.allObjectInstances = allObjectInstances;
         this.openFormCallback = openFormCallback;
         this.storageKey = storageKey;
-        
+
         this.elementoHTML = null;
         this.sliderInput = null;
-        this.valueDisplay = null;
+        this.label = null;
         this.isDragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
-        
-        this.largura = 300;
-        this.altura = 50;
+        this.view = 0; // Ordem de exibição
 
         this.criarElemento();
         this.update(config);
@@ -31,16 +29,12 @@ export default class Slider {
 
     /**
      * Atualiza as propriedades do objeto a partir de um novo objeto de configuração.
-     * Este método é chamado na criação e na edição do objeto.
      * @param {object} config - O novo objeto de configuração.
      */
     update(config) {
         Object.assign(this, config);
-        
-        if(this.elementoHTML) {
-            this.atualizarPosicaoVisual();
-            this.updateAppearance(); // Apenas atualiza a aparência do slider em si
-        }
+        this.view = config.view || 0; // Garante que a view seja definida
+        this.updateAppearance();
     }
 
     /**
@@ -48,31 +42,30 @@ export default class Slider {
      */
     criarElemento() {
         this.elementoHTML = document.createElement('div');
-        this.elementoHTML.classList.add('draggable', 'slider-container');
+        this.elementoHTML.classList.add('draggable', 'object-slider');
         
-        const label = document.createElement('label');
-        this.valueDisplay = document.createElement('span');
+        this.label = document.createElement('label');
+        this.label.classList.add('slider-label');
         
-        const labelContainer = document.createElement('div');
-        labelContainer.className = 'flex justify-between items-center';
-        labelContainer.appendChild(label);
-        labelContainer.appendChild(this.valueDisplay);
-
         this.sliderInput = document.createElement('input');
         this.sliderInput.type = 'range';
-        
-        this.elementoHTML.appendChild(labelContainer);
+        this.sliderInput.classList.add('slider-input');
+
+        this.elementoHTML.appendChild(this.label);
         this.elementoHTML.appendChild(this.sliderInput);
 
-        this.sliderInput.addEventListener('mousedown', (e) => e.stopPropagation());
-        this.elementoHTML.addEventListener('mousedown', this.iniciarArrasto.bind(this));
+        this.elementoHTML.addEventListener('mousedown', (e) => {
+            if (e.target.type !== 'range') { // Só arrasta se não for o controle do slider
+                this.iniciarArrasto(e);
+            }
+        });
         document.addEventListener('mousemove', this.arrastar.bind(this));
         document.addEventListener('mouseup', this.pararArrasto.bind(this));
         
         this.sliderInput.addEventListener('input', this.handleSliderInput.bind(this));
-
+        
         this.elementoHTML.addEventListener('dblclick', (e) => {
-            e.stopPropagation(); // Impede que o evento se propague para a cena
+            e.stopPropagation();
             const objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
             const currentData = objectsData.find(d => d.id === this.id);
             if (currentData) {
@@ -82,82 +75,74 @@ export default class Slider {
 
         this.scene.appendChild(this.elementoHTML);
     }
-    
+
     /**
-     * Atualiza a posição visual do container do slider.
+     * Atualiza a aparência visual (posição, z-index, valores) do slider.
      */
-    atualizarPosicaoVisual() {
+    updateAppearance() {
         if (!this.elementoHTML) return;
 
         this.elementoHTML.id = this.id;
+        this.elementoHTML.style.zIndex = this.view;
+
         const cssLeft = this.x;
         const cssTop = this.scene.clientHeight - this.y - this.altura;
-
         this.elementoHTML.style.left = `${cssLeft}px`;
         this.elementoHTML.style.top = `${cssTop}px`;
         this.elementoHTML.style.width = `${this.largura}px`;
         this.elementoHTML.style.height = `${this.altura}px`;
-    }
-    
-    /**
-     * Atualiza a aparência (label, min/max, valor) do slider para refletir seu estado atual.
-     * Ele lê o valor do objeto alvo para definir sua posição inicial.
-     */
-    updateAppearance() {
-        if (!this.sliderInput) return;
-        
-        const label = this.elementoHTML.querySelector('label');
-        label.textContent = this.nome;
-        
+
+        this.label.textContent = `${this.nome}: `;
         this.sliderInput.min = this.min;
         this.sliderInput.max = this.max;
-        this.sliderInput.step = this.targetProperty === 'rotation' ? 1 : 0.1;
-        
-        const targetInstance = this.allObjects.find(obj => obj.id === this.targetId);
+
+        const targetInstance = this.allObjectInstances.find(obj => obj.id === this.targetId);
         if (targetInstance) {
             let currentValue = targetInstance[this.targetProperty];
-            if (this.targetProperty === 'rotation') {
-                currentValue = (currentValue || 0) * (180 / Math.PI);
+            // Converte rotação de radianos para graus para o slider
+            if(this.targetProperty === 'rotation') {
+                currentValue = currentValue * (180 / Math.PI);
             }
             this.sliderInput.value = currentValue;
-            this.valueDisplay.textContent = Math.round(currentValue);
-        } else {
-             this.valueDisplay.textContent = '---';
+            this.label.textContent = `${this.nome}: ${Math.round(currentValue)}`;
         }
+    }
+
+    /**
+     * Lida com a alteração do valor do input do slider.
+     */
+    handleSliderInput() {
+        let newValue = parseFloat(this.sliderInput.value);
+        this.label.textContent = `${this.nome}: ${Math.round(newValue)}`;
+
+        const targetInstance = this.allObjectInstances.find(obj => obj.id === this.targetId);
+        if (!targetInstance) return;
+
+        // Converte rotação de graus (do slider) para radianos (do objeto)
+        let valueToSave = newValue;
+        if(this.targetProperty === 'rotation') {
+            valueToSave = newValue * (Math.PI / 180);
+        }
+
+        const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
+            if (d.id === this.targetId) {
+                return { ...d, [this.targetProperty]: valueToSave };
+            }
+            return d;
+        });
+        localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
+        
+        targetInstance.update(objectsData.find(d => d.id === this.targetId));
     }
     
     /**
-     * Chamado quando o usuário move o slider.
-     * Encontra o objeto alvo, atualiza sua propriedade e salva o estado.
+     * Remove o elemento do DOM.
      */
-    handleSliderInput() {
-        const targetInstance = this.allObjects.find(obj => obj.id === this.targetId);
-        if (!targetInstance) return;
-
-        let value = parseFloat(this.sliderInput.value);
-        this.valueDisplay.textContent = Math.round(value);
-
-        let objectsData = JSON.parse(localStorage.getItem(this.storageKey)) || [];
-        const targetDataIndex = objectsData.findIndex(d => d.id === this.targetId);
-        
-        if (targetDataIndex === -1) return;
-        
-        let updatedTargetData = { ...objectsData[targetDataIndex] };
-        const valueToApply = this.targetProperty === 'rotation' ? value * (Math.PI / 180) : value;
-
-        updatedTargetData[this.targetProperty] = valueToApply;
-        
-        targetInstance.update(updatedTargetData);
-
-        objectsData[targetDataIndex] = updatedTargetData;
-        localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
-    }
-
     destroy() {
         if (this.elementoHTML) this.elementoHTML.remove();
     }
 
-    // --- DRAG AND DROP ---
+    // --- LÓGICA DE DRAG AND DROP ---
     iniciarArrasto(event) {
         this.isDragging = true;
         this.elementoHTML.style.zIndex = 1000;
@@ -179,7 +164,7 @@ export default class Slider {
 
         this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.largura));
         this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.altura));
-        
+
         const objectsData = (JSON.parse(localStorage.getItem(this.storageKey)) || []).map(d => {
             if (d.id === this.id) {
                 return { ...d, x: this.x, y: this.y };
@@ -188,12 +173,12 @@ export default class Slider {
         });
         localStorage.setItem(this.storageKey, JSON.stringify(objectsData));
 
-        this.atualizarPosicaoVisual();
+        this.updateAppearance();
     }
 
     pararArrasto() {
         this.isDragging = false;
-        this.elementoHTML.style.zIndex = 1;
+        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
     }
 }
 

@@ -19,17 +19,22 @@ const duplicateBtn = document.getElementById('duplicate-btn');
 const objectIdInput = document.getElementById('object-id');
 const objectTypeInput = document.getElementById('object-type');
 
+// --- ELEMENTOS DA TABELA ---
+const manageObjectsBtn = document.getElementById('manage-objects-btn');
+const tableModalContainer = document.getElementById('table-modal-container');
+const closeTableBtn = document.getElementById('close-table-btn');
+const objectsTable = document.getElementById('objects-table');
+
 // Grupos de campos
 const rectFields = document.getElementById('rect-fields');
 const circleFields = document.getElementById('circle-fields');
 const shapeCommonFields = document.getElementById('shape-common-fields');
 const sliderFields = document.getElementById('slider-fields');
 
-
 // --- ESTADO DA APLICAÇÃO ---
 let isCollisionDetectionActive = true;
 const allObjects = []; // Array para armazenar as instâncias dos objetos
-const STORAGE_KEY = 'interactive_2d_objects_v6';
+const STORAGE_KEY = 'interactive_2d_objects_v7';
 
 /**
  * Lê os dados dos objetos do localStorage.
@@ -52,10 +57,8 @@ function saveObjectsToStorage(objectsData) {
  * Verifica a colisão entre dois objetos (AABB).
  */
 function checkAABBCollision(objA, objB) {
-    // Sliders não colidem
     if (objA.type === 'slider' || objB.type === 'slider') return false; 
     
-    // Para círculos, largura e altura são o diâmetro. AABB é uma aproximação.
     const larguraA = objA.largura || objA.diametro;
     const alturaA = objA.altura || objA.diametro;
     const larguraB = objB.largura || objB.diametro;
@@ -99,7 +102,7 @@ function gameLoop() {
 
 function populateTargetObjectDropdown(currentId) {
     const targetObjectSelect = document.getElementById('target-object');
-    targetObjectSelect.innerHTML = ''; // Limpa opções existentes
+    targetObjectSelect.innerHTML = '';
     
     const objectsData = loadObjectsFromStorage();
     const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo'].includes(obj.type));
@@ -120,7 +123,6 @@ function openForm(config = null, type) {
     objectForm.reset();
     objectTypeInput.value = type;
 
-    // Esconde todos os grupos de campos
     rectFields.classList.add('hidden');
     circleFields.classList.add('hidden');
     shapeCommonFields.classList.add('hidden');
@@ -130,6 +132,7 @@ function openForm(config = null, type) {
         formTitle.textContent = `Editar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         objectIdInput.value = config.id;
         document.getElementById('object-name').value = config.nome;
+        document.getElementById('object-view').value = config.view || 0;
         document.getElementById('x').value = Math.round(config.x);
         document.getElementById('y').value = Math.round(config.y);
         deleteBtn.classList.remove('hidden');
@@ -137,6 +140,7 @@ function openForm(config = null, type) {
     } else { // Modo Criação
         formTitle.textContent = `Adicionar Novo ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         objectIdInput.value = `${type}_${Date.now()}`;
+        document.getElementById('object-view').value = loadObjectsFromStorage().length;
         document.getElementById('x').value = Math.round(Math.random() * 200 + 50);
         document.getElementById('y').value = Math.round(Math.random() * 200 + 50);
         deleteBtn.classList.add('hidden');
@@ -150,7 +154,6 @@ function openForm(config = null, type) {
             document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
             document.getElementById('reacts-to-collision').checked = config.reactsToCollision;
         } else {
-             // Valores padrão para novas formas
              document.getElementById('cor').value = 'rgba(59, 130, 246, 1)';
              document.getElementById('cor-colisao').value = 'rgba(239, 68, 68, 1)';
              document.getElementById('reacts-to-collision').checked = true;
@@ -203,6 +206,7 @@ function getConfigFromForm() {
         id: objectIdInput.value,
         type: type,
         nome: document.getElementById('object-name').value.trim() || 'Sem nome',
+        view: parseInt(document.getElementById('object-view').value, 10) || 0,
         x: parseInt(document.getElementById('x').value, 10) || 0,
         y: parseInt(document.getElementById('y').value, 10) || 0,
     };
@@ -306,6 +310,120 @@ function handleDuplicate() {
     closeForm();
 }
 
+// --- LÓGICA DA TABELA DE GERENCIAMENTO ---
+
+const tableHeaders = ['ID', 'Nome', 'Tipo', 'View', 'X', 'Y', 'Largura', 'Altura', 'Diâmetro', 'Rotação (°)', 'Alvo ID', 'Alvo Prop.'];
+const editableProperties = ['nome', 'view', 'x', 'y', 'largura', 'altura', 'diametro', 'rotation', 'targetId', 'targetProperty'];
+
+function openObjectsTable() {
+    const objectsData = loadObjectsFromStorage();
+    const thead = objectsTable.querySelector('thead');
+    const tbody = objectsTable.querySelector('tbody');
+
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    const headerRow = document.createElement('tr');
+    tableHeaders.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+
+    objectsData.forEach(obj => {
+        const row = document.createElement('tr');
+        tableHeaders.forEach(header => {
+            const td = document.createElement('td');
+            let key, value;
+            
+            switch(header) {
+                case 'ID': key = 'id'; break;
+                case 'Nome': key = 'nome'; break;
+                case 'Tipo': key = 'type'; break;
+                case 'View': key = 'view'; break;
+                case 'X': key = 'x'; break;
+                case 'Y': key = 'y'; break;
+                case 'Largura': key = 'largura'; break;
+                case 'Altura': key = 'altura'; break;
+                case 'Diâmetro': key = 'diametro'; break;
+                case 'Rotação (°)': key = 'rotation'; break;
+                case 'Alvo ID': key = 'targetId'; break;
+                case 'Alvo Prop.': key = 'targetProperty'; break;
+            }
+
+            value = obj[key];
+            if (key === 'rotation' && value !== undefined) {
+                value = (value * (180 / Math.PI)).toFixed(2); // Converte radianos para graus
+            }
+            
+            td.textContent = value !== undefined ? value : 'N/A';
+            td.dataset.objectId = obj.id;
+            td.dataset.property = key;
+
+            if (editableProperties.includes(key)) {
+                td.contentEditable = true;
+                td.addEventListener('blur', handleTableCellEdit);
+                td.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.target.blur();
+                    }
+                });
+            } else {
+                 td.style.color = '#9ca3af'; // gray-400
+            }
+
+            row.appendChild(td);
+        });
+        tbody.appendChild(row);
+    });
+
+    tableModalContainer.classList.remove('hidden');
+}
+
+function closeObjectsTable() {
+    tableModalContainer.classList.add('hidden');
+}
+
+function handleTableCellEdit(event) {
+    const cell = event.target;
+    const { objectId, property } = cell.dataset;
+    let newValue = cell.textContent.trim();
+
+    const numericProps = ['view', 'x', 'y', 'largura', 'altura', 'diametro', 'rotation'];
+    if (numericProps.includes(property)) {
+        newValue = parseFloat(newValue) || 0;
+    }
+    
+    let valueToSave = newValue;
+    if (property === 'rotation') {
+        valueToSave = newValue * (Math.PI / 180); // Converte graus para radianos
+    }
+
+    let objectsData = loadObjectsFromStorage();
+    let updatedConfig = null;
+    
+    objectsData = objectsData.map(data => {
+        if (data.id === objectId) {
+            const newData = { ...data, [property]: valueToSave };
+            updatedConfig = newData;
+            return newData;
+        }
+        return data;
+    });
+
+    saveObjectsToStorage(objectsData);
+
+    if (updatedConfig) {
+        const instance = allObjects.find(obj => obj.id === objectId);
+        if (instance) {
+            instance.update(updatedConfig);
+        }
+    }
+}
+
+
 // --- INICIALIZAÇÃO E CRIAÇÃO DE INSTÂNCIAS ---
 
 function createRetanguloInstance(config) {
@@ -338,6 +456,9 @@ function init() {
     deleteBtn.addEventListener('click', handleDelete);
     duplicateBtn.addEventListener('click', handleDuplicate);
     objectForm.addEventListener('submit', handleFormSubmit);
+
+    manageObjectsBtn.addEventListener('click', openObjectsTable);
+    closeTableBtn.addEventListener('click', closeObjectsTable);
 
     gameLoop();
 }
