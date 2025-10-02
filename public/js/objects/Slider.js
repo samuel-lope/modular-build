@@ -121,6 +121,19 @@ export default class Slider extends Objeto2DBase {
         
         if (updatedConfig) {
             targetInstance.update(updatedConfig);
+
+            // Se o alvo for um grupo, precisamos salvar o estado de seus filhos também
+            if (targetInstance.type === 'grupo') {
+                const groupData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
+                groupData.objects = groupData.objects.map(d => {
+                    const childInGroup = targetInstance.childObjects.find(c => c.id === d.id);
+                    if (childInGroup) {
+                        return { ...d, x: childInGroup.x, y: childInGroup.y };
+                    }
+                    return d;
+                });
+                localStorage.setItem(this.storageKey, JSON.stringify(groupData));
+            }
         }
     }
 }

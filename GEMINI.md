@@ -17,6 +17,7 @@ O projeto é uma aplicação web que permite aos usuários criar, manipular e co
   - `Retangulo.js`: Define o comportamento e as propriedades de objetos retangulares.
   - `Circulo.js`: Define o comportamento e as propriedades de objetos circulares.
   - `Slider.js`: Define o comportamento de um objeto slider que pode controlar propriedades de outros objetos.
+  - `Grupo.js`: Classe lógica para agrupar e controlar múltiplos objetos como uma unidade.
 - `GEMINI.md`: Este arquivo de documentação.
 - `MATRIZ_de_OBJETOS.md`: Documentação técnica detalhada sobre as propriedades e métodos de cada classe de objeto.
 
@@ -58,34 +59,27 @@ O projeto é uma aplicação web que permite aos usuários criar, manipular e co
   - **Persistência**: Salva a nova posição no `localStorage` ao final do arrasto.
   - **Lógica de Barreira**: No método `arrastar`, verifica se o movimento colidiria com um objeto marcado como `isObstacle` e, em caso afirmativo, impede o movimento.
 
-### 4.2. Classes Filhas (`Retangulo`, `Circulo`, `Slider`)
+### 4.2. Classes Filhas (`Retangulo`, `Circulo`, `Slider`, `Grupo`)
 
 - Herdam de `Objeto2DBase`.
-- Seus construtores chamam `super()` e depois cuidam de suas inicializações específicas.
-- A principal responsabilidade é implementar o método `updateAppearance()`, que define como o objeto é renderizado na tela (tamanho, cor, forma, etc.).
-- Podem ter propriedades e métodos específicos, como o `handleSliderInput` da classe `Slider`.
+- A principal responsabilidade das classes visuais (`Retangulo`, `Circulo`, `Slider`) é implementar o método `updateAppearance()`, que define como o objeto é renderizado na tela.
+- A classe `Grupo` é lógica e usa seus métodos (`update`, `moveBy`) para orquestrar o comportamento de seus objetos filhos.
 
-## 5. Novas Funcionalidades e Melhorias (02/10/2025)
+## 5. Log de Alterações
 
-Esta seção detalha as mudanças mais recentes implementadas no projeto.
+### 5.1. Mudanças em 02/10/2025 (Implementação de Grupos e Melhorias)
 
-### 5.1. Refatoração da Arquitetura de Objetos
+- **Funcionalidade de Agrupamento**: Implementada a capacidade de agrupar múltiplos objetos. 
+  - Uma nova classe `Grupo.js` foi criada para gerenciar objetos como uma unidade.
+  - A interface do "Gerenciador de Objetos" foi atualizada com checkboxes e um botão "Agrupar" para criar grupos.
+  - A lógica de arrastar foi modificada para mover grupos inteiros de forma coesa.
+  - Grupos agora podem ser controlados por Sliders.
+- **Exclusão de Grupos**: Implementada a lógica para desagrupar objetos quando um grupo é excluído.
+- **Melhorias de UI/UX**: A interface foi refinada com ícones, tooltips e um novo layout para os botões de controle.
+- **Gerenciamento de Cena**: Adicionadas as funcionalidades de "Limpar Cena", "Baixar JSON" e "Importar JSON".
 
-- **Classe Base `Objeto2DBase`**: Foi introduzida uma classe base para todos os objetos da cena. Esta refatoração crucial limpou o código das classes `Retangulo`, `Circulo` e `Slider`, centralizando toda a lógica duplicada de arrastar e soltar, ciclo de vida (criação, atualização, destruição) e persistência em um único local. Isso torna o código mais limpo, fácil de manter e estender.
+### 5.2. Mudanças em 03/10/2025 (Correções e Refinamentos)
 
-### 5.2. Funcionalidade de "Barreira"
-
-- **Propriedade `isObstacle`**: Foi implementada a funcionalidade de "barreira". Agora, `Retangulo` e `Circulo` podem ser marcados como intransponíveis.
-- **Interface**: Um checkbox "É uma barreira (intransponível)" foi adicionado ao formulário de edição.
-- **Lógica**: A lógica de colisão foi adicionada diretamente ao método `arrastar` da classe `Objeto2DBase`. Antes de mover um objeto, ele verifica se a nova posição o faria colidir com qualquer outro objeto marcado como `isObstacle`. Se uma colisão for detectada, o movimento é prevenido.
-
-### 5.3. Melhorias de UI/UX
-
-- **Botões com Ícones**: Todos os botões de controle principais foram convertidos de texto para ícones SVG. O texto descritivo agora aparece como um tooltip (dica de ferramenta) quando o usuário passa o mouse sobre o botão, resultando em uma interface mais limpa e moderna.
-- **Layout dos Controles**: Em `index.html`, os botões de ação global ("Importar JSON", "Baixar JSON", "Gerenciar Objetos" e "Limpar Cena") foram agrupados no canto superior direito da tela para uma melhor organização e acesso rápido.
-
-### 5.4. Gerenciamento de Cena
-
-- **Limpar Cena**: Um novo botão foi adicionado, permitindo ao usuário remover todos os objetos da cena de uma só vez. A ação pede confirmação, limpa os dados do `localStorage` e recarrega a página.
-- **Baixar JSON (Exportar)**: Foi adicionado um botão que permite ao usuário exportar o estado completo da cena (incluindo as configurações de tema e todos os objetos) como um arquivo `.json`. Isso permite fazer backup e compartilhar as criações.
-- **Importar JSON (Carregar)**: Um botão de upload foi adicionado para permitir que o usuário carregue um arquivo `.json` de cena. A aplicação valida a estrutura do arquivo, e se for válido, os dados são carregados no `localStorage` e a cena é atualizada instantaneamente, recarregando a página.
+- **Correção de Bugs Críticos**: Resolvidos múltiplos erros de sintaxe no arquivo `main.js` que impediam a aplicação de ser carregada corretamente. Esses erros foram introduzidos durante a remoção da funcionalidade "Duplicar".
+- **Remoção da Funcionalidade "Duplicar"**: A função de duplicar objetos e grupos foi temporariamente removida do formulário de edição para evitar erros e permitir uma futura reimplementação mais estável.
+- **Correção no Movimento de Grupos**: Corrigido um bug crítico no método `update` da classe `Grupo.js`. O erro causava um cálculo incorreto da posição do grupo ao ser movido através do formulário de edição, o que impedia o movimento correto. A lógica agora calcula o deslocamento (delta) e o aplica corretamente apenas aos objetos filhos, garantindo que o grupo se mova de forma coesa e previsível.

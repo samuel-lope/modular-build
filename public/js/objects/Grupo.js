@@ -37,7 +37,25 @@ export default class Grupo extends Objeto2DBase {
      * @param {object} config - O novo objeto de configuração.
      */
     update(config) {
+        const oldX = this.x;
+        const oldY = this.y;
+
+        // Atualiza as propriedades do grupo (incluindo x e y) com os valores do formulário
         super.update(config);
+        
+        // Calcula a diferença (delta) que o grupo se moveu
+        const deltaX = this.x - oldX;
+        const deltaY = this.y - oldY;
+
+        // Se houve movimento, aplica o delta diretamente aos filhos
+        if (deltaX !== 0 || deltaY !== 0) {
+            for (const child of this.childObjects) {
+                child.x += deltaX;
+                child.y += deltaY;
+                child.updateAppearance();
+            }
+        }
+
         this.childIds = config.childIds || [];
         if (this.allObjectInstances) {
             this.resolveChildren();

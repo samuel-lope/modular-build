@@ -47,7 +47,6 @@ const objectForm = document.getElementById('object-form');
 const formTitle = document.getElementById('form-title');
 const cancelBtn = document.getElementById('cancel-btn');
 const deleteBtn = document.getElementById('delete-btn');
-const duplicateBtn = document.getElementById('duplicate-btn');
 const objectIdInput = document.getElementById('object-id');
 const objectTypeInput = document.getElementById('object-type');
 
@@ -199,7 +198,6 @@ function openForm(config = null, type) {
         document.getElementById('x').value = Math.round(config.x);
         document.getElementById('y').value = Math.round(config.y);
         deleteBtn.classList.remove('hidden');
-        duplicateBtn.classList.remove('hidden');
     } else { // Modo Criação
         formTitle.textContent = `Adicionar Novo ${typeInfo.displayName}`;
         objectIdInput.value = `${type}_${Date.now()}`;
@@ -207,7 +205,6 @@ function openForm(config = null, type) {
         document.getElementById('x').value = Math.round(Math.random() * 200 + 50);
         document.getElementById('y').value = Math.round(Math.random() * 200 + 50);
         deleteBtn.classList.add('hidden');
-        duplicateBtn.classList.add('hidden');
     }
     
     // Lógica específica para preencher valores do formulário
@@ -304,6 +301,9 @@ function getConfigFromForm() {
             min: parseFloat(document.getElementById('min-value').value) || 0,
             max: parseFloat(document.getElementById('max-value').value) || 100,
         };
+    } else if (type === 'grupo') {
+        // Grupos usam apenas os campos comuns no formulário
+        return commonConfig;
     }
 }
 
@@ -316,52 +316,56 @@ function handleFormSubmit(event) {
     const appData = loadAppDataFromStorage();
     const isEditing = appData.objects.some(obj => obj.id === id);
 
-    if (isEditing) {
-        appData.objects = appData.objects.map(data => (data.id === id ? config : data));
-        const objectInstance = allObjects.find(obj => obj.id === id);
-        if (objectInstance) {
-            objectInstance.update(config);
-        }
-    } else {
-        appData.objects.push(config);
-        createObjectInstance(config);
-    }
+            if (isEditing) {
+                const objectInstance = allObjects.find(obj => obj.id === id);
+                if (objectInstance) {
+                    objectInstance.update(config);
     
+                    // Se for um grupo, as posições dos filhos foram atualizadas em memória.
+                    // Agora, precisamos refletir essas mudanças no array de dados antes de salvar.
+                    if (objectInstance.type === 'grupo') {
+                        objectInstance.childObjects.forEach(childInstance => {
+                            const childDataIndex = appData.objects.findIndex(d => d.id === childInstance.id);
+                            if (childDataIndex > -1) {
+                                appData.objects[childDataIndex].x = childInstance.x;
+                                appData.objects[childDataIndex].y = childInstance.y;
+                            }
+                        });
+                    }
+                }
+                // Atualiza o objeto principal (grupo ou item)
+                appData.objects = appData.objects.map(data => (data.id === id ? config : data));
+    
+            } else {
+                appData.objects.push(config);
+                createObjectInstance(config);
+            }    
     saveAppDataToStorage(appData);
     closeForm();
 }
 
 function handleDelete() {
     const idToDelete = objectIdInput.value;
-    const objectIndex = allObjects.findIndex(obj => obj.id === idToDelete);
-    if (objectIndex > -1) {
-        allObjects[objectIndex].destroy();
-        allObjects.splice(objectIndex, 1);
+    const typeToDelete = objectTypeInput.value;
+    
+    const appData = loadAppDataFromStorage();
+
+    if (typeToDelete === 'grupo') {
+        // Lógica para desagrupar: remove o groupId dos filhos
+        appData.objects = appData.objects.map(obj => {
+            if (obj.groupId === idToDelete) {
+                const { groupId, ...rest } = obj; // Cria um novo objeto sem a propriedade groupId
+                return rest;
+            }
+            return obj;
+        });
     }
-    
-    const appData = loadAppDataFromStorage();
+
+    // Remove o objeto principal (seja grupo ou item normal)
     appData.objects = appData.objects.filter(data => data.id !== idToDelete);
-    saveAppDataToStorage(appData);
-    closeForm();
-}
-
-function handleDuplicate() {
-    const config = getConfigFromForm();
-    const newConfig = {
-        ...config,
-        id: `${config.type}_${Date.now()}`,
-        nome: `${config.nome} (cópia)`,
-        x: config.x + 20,
-        y: config.y + 20,
-    };
     
-    const appData = loadAppDataFromStorage();
-    appData.objects.push(newConfig);
     saveAppDataToStorage(appData);
-    
-    createObjectInstance(newConfig);
-
-    closeForm();
+    location.reload(); // Recarrega a página para remover instâncias e elementos da cena
 }
 
 // --- LÓGICA DA TABELA DE GERENCIAMENTO ---
@@ -451,6 +455,15 @@ function openObjectsTable() {
 
             row.appendChild(td);
         });
+        // Adiciona listener de duplo clique na linha para abrir o formulário de edição
+        row.addEventListener('dblclick', () => {
+            const currentData = objectsData.find(d => d.id === obj.id);
+            if (currentData) {
+                closeObjectsTable(); // Fecha o modal da tabela primeiro
+                openForm(currentData, currentData.type);
+            }
+        });
+
         tbody.appendChild(row);
     });
 
@@ -689,7 +702,6 @@ function init() {
     
     cancelBtn.addEventListener('click', closeForm);
     deleteBtn.addEventListener('click', handleDelete);
-    duplicateBtn.addEventListener('click', handleDuplicate);
     objectForm.addEventListener('submit', handleFormSubmit);
 
     closeTableBtn.addEventListener('click', closeObjectsTable);
@@ -716,4 +728,3 @@ function init() {
 
 // --- PONTO DE ENTRADA ---
 init();
-
