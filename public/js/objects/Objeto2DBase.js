@@ -46,7 +46,8 @@ export default class Objeto2DBase {
     update(config) {
         Object.assign(this, config);
         this.view = config.view || 0;
-        this.isObstacle = config.isObstacle || false; // Garante que a propriedade seja atualizada
+        this.isObstacle = config.isObstacle || false; 
+        this.groupId = config.groupId || null;
     }
 
     /**
@@ -131,9 +132,12 @@ export default class Objeto2DBase {
         newX = Math.max(0, Math.min(newX, this.scene.clientWidth - larguraObjeto));
         newY = Math.max(0, Math.min(newY, this.scene.clientHeight - alturaObjeto));
 
+        const deltaX = newX - this.x;
+        const deltaY = newY - this.y;
+
         // --- LÓGICA DA BARREIRA ---
         if (this.allObjects && this.collisionChecker) {
-            const obstacles = this.allObjects.filter(obj => obj.isObstacle && obj.id !== this.id);
+            const obstacles = this.allObjects.filter(obj => obj.isObstacle && obj.id !== this.id && !this.groupId);
             if (obstacles.length > 0) {
                 const ghost = { 
                     ...this, 
@@ -150,23 +154,52 @@ export default class Objeto2DBase {
                         break;
                     }
                 }
-
-                if (collisionDetected) {
-                    return; // Impede o movimento
-                }
+                if (collisionDetected) return; // Impede o movimento
             }
         }
 
-        this.x = newX;
-        this.y = newY;
-
-        this.salvarPosicaoNoStorage();
-        this.updateAppearance();
+        // --- LÓGICA DE GRUPO ---
+        if (this.groupId && this.allObjects) {
+            const group = this.allObjects.find(obj => obj.id === this.groupId);
+            if (group) {
+                group.moveBy(deltaX, deltaY);
+            }
+        } else {
+            // Movimento individual
+            this.x = newX;
+            this.y = newY;
+            this.updateAppearance();
+        }
     }
 
     pararArrasto() {
+        if (!this.isDragging) return;
         this.isDragging = false;
         this.elementoHTML.style.zIndex = this.view;
+
+        // Se o objeto pertence a um grupo, o grupo lida com o salvamento
+        if (this.groupId && this.allObjects) {
+            const group = this.allObjects.find(obj => obj.id === this.groupId);
+            if (group) {
+                const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
+                
+                // Atualiza o grupo e seus filhos no localStorage
+                appData.objects = appData.objects.map(d => {
+                    if (d.id === group.id) {
+                        return { ...d, x: group.x, y: group.y };
+                    }
+                    const childInGroup = group.childObjects.find(c => c.id === d.id);
+                    if (childInGroup) {
+                        return { ...d, x: childInGroup.x, y: childInGroup.y };
+                    }
+                    return d;
+                });
+                localStorage.setItem(this.storageKey, JSON.stringify(appData));
+            }
+        } else {
+            // Salvamento individual
+            this.salvarPosicaoNoStorage();
+        }
     }
     
     /**

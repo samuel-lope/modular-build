@@ -1,7 +1,7 @@
 import Retangulo from './objects/Retangulo.js';
 import Circulo from './objects/Circulo.js';
 import Slider from './objects/Slider.js';
-// A classe base não precisa ser importada aqui, pois as classes filhas já a conhecem.
+import Grupo from './objects/Grupo.js';
 
 // --- REGISTRO DE TIPOS DE OBJETO ---
 const objectTypeRegistry = {
@@ -24,6 +24,13 @@ const objectTypeRegistry = {
         displayName: 'Slider',
         buttonClass: 'bg-purple-600 hover:bg-purple-700',
         formFieldsId: 'slider-fields',
+        commonFieldsId: null
+    },
+    'grupo': {
+        class: Grupo,
+        displayName: 'Grupo',
+        buttonClass: 'hidden', // Não pode ser adicionado manualmente
+        formFieldsId: null,
         commonFieldsId: null
     }
 };
@@ -145,7 +152,8 @@ function populateTargetObjectDropdown(currentId) {
     targetObjectSelect.innerHTML = '';
     
     const { objects: objectsData } = loadAppDataFromStorage();
-    const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo'].includes(obj.type));
+    // Agora inclui retângulos, círculos e grupos como alvos possíveis
+    const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo', 'grupo'].includes(obj.type));
 
     availableTargets.forEach(target => {
         const option = document.createElement('option');
@@ -363,24 +371,42 @@ const editableProperties = ['nome', 'view', 'x', 'y', 'largura', 'altura', 'diam
 
 function openObjectsTable() {
     const { objects: objectsData } = loadAppDataFromStorage();
-    const thead = objectsTable.querySelector('thead');
+    const thead = objectsTable.querySelector('thead tr');
     const tbody = objectsTable.querySelector('tbody');
+    const groupBtn = document.getElementById('group-selected-btn');
 
-    thead.innerHTML = '';
+    thead.innerHTML = '<th class="px-4 py-3 w-12"></th>'; // Limpa e adiciona o header do checkbox
     tbody.innerHTML = '';
 
-    const headerRow = document.createElement('tr');
     tableHeaders.forEach(headerText => {
         const th = document.createElement('th');
+        th.scope = 'col';
+        th.className = 'px-4 py-3';
         th.textContent = headerText;
-        headerRow.appendChild(th);
+        thead.appendChild(th);
     });
-    thead.appendChild(headerRow);
 
     objectsData.forEach(obj => {
         const row = document.createElement('tr');
+        row.className = 'border-b border-gray-700 hover:bg-gray-700';
+
+        // Célula do Checkbox
+        const checkboxCell = document.createElement('td');
+        checkboxCell.className = 'px-4 py-2';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = obj.id;
+        checkbox.className = 'object-select-checkbox w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500';
+        // Desabilita o checkbox para grupos ou objetos que já estão em um grupo
+        if (obj.type === 'grupo' || obj.groupId) {
+            checkbox.disabled = true;
+        }
+        checkboxCell.appendChild(checkbox);
+        row.appendChild(checkboxCell);
+
         tableHeaders.forEach(header => {
             const td = document.createElement('td');
+            td.className = 'px-4 py-2';
             let key, value;
             
             switch(header) {
@@ -399,6 +425,9 @@ function openObjectsTable() {
             }
 
             value = obj[key];
+            if (key === 'id' && obj.groupId) {
+                value = `${value} (G: ${obj.groupId.substring(0,4)})`;
+            }
             if (key === 'rotation' && value !== undefined) {
                 value = (value * (180 / Math.PI)).toFixed(2); // Converte radianos para graus
             }
@@ -424,6 +453,18 @@ function openObjectsTable() {
         });
         tbody.appendChild(row);
     });
+
+    // Lógica para habilitar/desabilitar o botão de agrupar
+    const checkboxes = tbody.querySelectorAll('.object-select-checkbox:not(:disabled)');
+    const toggleGroupButton = () => {
+        const selectedCount = tbody.querySelectorAll('.object-select-checkbox:checked').length;
+        groupBtn.disabled = selectedCount < 2;
+    };
+    checkboxes.forEach(cb => cb.addEventListener('change', toggleGroupButton));
+    toggleGroupButton(); // Estado inicial
+
+    // Listener para o botão de agrupar
+    groupBtn.addEventListener('click', handleGroupObjects);
 
     tableModalContainer.classList.remove('hidden');
 }
@@ -469,6 +510,65 @@ function handleTableCellEdit(event) {
     }
 }
 
+/**
+ * Lida com a lógica de agrupar objetos selecionados na tabela.
+ */
+function handleGroupObjects() {
+    const selectedIds = Array.from(document.querySelectorAll('#objects-table .object-select-checkbox:checked')).map(cb => cb.value);
+
+    if (selectedIds.length < 2) {
+        alert('Selecione pelo menos dois objetos para agrupar.');
+        return;
+    }
+
+    const appData = loadAppDataFromStorage();
+    const selectedObjects = appData.objects.filter(obj => selectedIds.includes(obj.id));
+
+    // Calcula os limites do grupo
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    selectedObjects.forEach(obj => {
+        const objMaxX = obj.x + (obj.largura || obj.diametro);
+        const objMaxY = obj.y + (obj.altura || obj.diametro);
+        if (obj.x < minX) minX = obj.x;
+        if (obj.y < minY) minY = obj.y;
+        if (objMaxX > maxX) maxX = objMaxX;
+        if (objMaxY > maxY) maxY = objMaxY;
+    });
+
+    const groupWidth = maxX - minX;
+    const groupHeight = maxY - minY;
+    const groupX = minX;
+    const groupY = minY;
+
+    // Cria o novo grupo
+    const groupId = `grupo_${Date.now()}`;
+    const newGroup = {
+        id: groupId,
+        type: 'grupo',
+        nome: `Grupo ${allObjects.filter(o => o.type === 'grupo').length + 1}`,
+        x: groupX,
+        y: groupY,
+        largura: groupWidth,
+        altura: groupHeight,
+        childIds: selectedIds,
+        view: Math.max(...selectedObjects.map(o => o.view)) + 1, // Garante que o grupo fique por cima
+    };
+
+    // Atualiza os objetos filhos com o ID do grupo
+    appData.objects = appData.objects.map(obj => {
+        if (selectedIds.includes(obj.id)) {
+            return { ...obj, groupId: groupId };
+        }
+        return obj;
+    });
+
+    // Adiciona o grupo à lista de objetos
+    appData.objects.push(newGroup);
+
+    saveAppDataToStorage(appData);
+    location.reload(); // Recarrega a página para aplicar as mudanças
+}
+
 
 // --- INICIALIZAÇÃO E CRIAÇÃO DE INSTÂNCIAS ---
 
@@ -490,6 +590,10 @@ function createObjectInstance(config) {
             // Injeta dependências para a lógica de colisão com obstáculos
             newObject.allObjects = allObjects;
             newObject.collisionChecker = checkAABBCollision;
+            break;
+
+        case 'grupo':
+            newObject = new ObjectClass(config, allObjects);
             break;
         
         default:
