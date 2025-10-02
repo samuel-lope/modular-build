@@ -47,6 +47,8 @@ const objectTypeInput = document.getElementById('object-type');
 // --- ELEMENTOS DA UI GERAL ---
 const clearSceneBtn = document.getElementById('clear-scene-btn');
 const downloadJsonBtn = document.getElementById('download-json-btn');
+const importJsonBtn = document.getElementById('import-json-btn');
+const importJsonInput = document.getElementById('import-json-input');
 
 // --- ELEMENTOS DA TABELA ---
 const manageObjectsBtn = document.getElementById('manage-objects-btn');
@@ -68,7 +70,8 @@ const objectIcons = {
     manage: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`
 };
 const uiIcons = {
-    download: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`
+    download: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+    upload: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`
 };
 
 /**
@@ -543,6 +546,35 @@ function init() {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        });
+    }
+
+    // Configura o botão de Importar JSON
+    if (importJsonBtn && importJsonInput) {
+        importJsonBtn.innerHTML = uiIcons.upload;
+        importJsonBtn.title = 'Importar JSON';
+
+        importJsonInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    // Validação simples da estrutura do JSON
+                    if (importedData && typeof importedData.theme === 'object' && Array.isArray(importedData.objects)) {
+                        saveAppDataToStorage(importedData);
+                        location.reload(); // Recarrega para aplicar a nova cena
+                    } else {
+                        alert('Erro: O arquivo JSON parece ser inválido ou não tem a estrutura esperada (theme, objects).');
+                    }
+                } catch (error) {
+                    alert(`Erro ao processar o arquivo JSON: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = null; // Reseta o input para permitir o re-upload do mesmo arquivo
         });
     }
     

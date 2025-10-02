@@ -81,10 +81,11 @@ Esta seção detalha as mudanças mais recentes implementadas no projeto.
 
 ### 5.3. Melhorias de UI/UX
 
-- **Botões com Ícones**: Todos os botões de controle principais (`Adicionar...`, `Gerenciar Objetos`, `Limpar Cena`, `Baixar JSON`) foram convertidos de texto para ícones SVG. O texto descritivo agora aparece como um tooltip (dica de ferramenta) quando o usuário passa o mouse sobre o botão, resultando em uma interface mais limpa e moderna.
-- **Layout dos Controles**: Em `index.html`, os botões de ação global ("Gerenciar Objetos", "Limpar Cena" e "Baixar JSON") foram agrupados no canto superior direito da tela para uma melhor organização e acesso rápido.
+- **Botões com Ícones**: Todos os botões de controle principais foram convertidos de texto para ícones SVG. O texto descritivo agora aparece como um tooltip (dica de ferramenta) quando o usuário passa o mouse sobre o botão, resultando em uma interface mais limpa e moderna.
+- **Layout dos Controles**: Em `index.html`, os botões de ação global ("Importar JSON", "Baixar JSON", "Gerenciar Objetos" e "Limpar Cena") foram agrupados no canto superior direito da tela para uma melhor organização e acesso rápido.
 
 ### 5.4. Gerenciamento de Cena
 
 - **Limpar Cena**: Um novo botão foi adicionado, permitindo ao usuário remover todos os objetos da cena de uma só vez. A ação pede confirmação, limpa os dados do `localStorage` e recarrega a página.
-- **Baixar JSON**: Foi adicionado um botão que permite ao usuário exportar o estado completo da cena (incluindo as configurações de tema e todos os objetos) como um arquivo `.json`. Isso permite fazer backup e compartilhar as criações.
+- **Baixar JSON (Exportar)**: Foi adicionado um botão que permite ao usuário exportar o estado completo da cena (incluindo as configurações de tema e todos os objetos) como um arquivo `.json`. Isso permite fazer backup e compartilhar as criações.
+- **Importar JSON (Carregar)**: Um botão de upload foi adicionado para permitir que o usuário carregue um arquivo `.json` de cena. A aplicação valida a estrutura do arquivo, e se for válido, os dados são carregados no `localStorage` e a cena é atualizada instantaneamente, recarregando a página.
