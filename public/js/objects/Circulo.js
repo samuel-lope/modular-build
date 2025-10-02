@@ -1,7 +1,9 @@
+import Objeto2DBase from './Objeto2DBase.js';
+
 /**
- * Classe que define um objeto Círculo 2D.
+ * Classe que define um objeto Círculo 2D, herdando de Objeto2DBase.
  */
-export default class Circulo {
+export default class Circulo extends Objeto2DBase {
     /**
      * @param {HTMLElement} scene - O elemento do palco.
      * @param {HTMLElement} coordinatesSpan - O span para exibir as coordenadas.
@@ -10,87 +12,43 @@ export default class Circulo {
      * @param {string} storageKey - A chave usada para o localStorage.
      */
     constructor(scene, coordinatesSpan, config, openFormCallback, storageKey) {
-        this.scene = scene;
+        super(scene, config, openFormCallback, storageKey);
         this.coordinatesSpan = coordinatesSpan;
-        this.openFormCallback = openFormCallback;
-        this.storageKey = storageKey;
-        
-        this.elementoHTML = null;
-        this.isDragging = false;
-        this.offsetX = 0;
-        this.offsetY = 0;
-        this.lastTap = 0;
-        this.dragged = false;
 
-        // Propriedades de estado
+        // Propriedades de estado específicas
         this.isColliding = false;
-        this.view = 0; // Ordem de exibição
 
         this.criarElemento();
-        this.update(config); // Aplica a configuração inicial
+        this.update(config);
     }
 
     /**
-     * Atualiza as propriedades do objeto a partir de um novo objeto de configuração.
+     * Cria o elemento, chamando o método da classe base e adicionando estilos específicos.
+     */
+    criarElemento() {
+        super.criarElemento(); // Cria o elemento base e anexa listeners
+        this.elementoHTML.classList.add('object-shape');
+        this.elementoHTML.style.borderRadius = '50%';
+    }
+
+    /**
+     * Atualiza as propriedades do objeto, chamando o método da classe base e tratando as específicas.
      * @param {object} config - O novo objeto de configuração.
      */
     update(config) {
-        Object.assign(this, config);
-        this.view = config.view || 0; // Garante que a view seja definida
+        super.update(config); // Atualiza propriedades base (id, x, y, etc.)
         
-        // Para a lógica de colisão (AABB), tratamos largura e altura como o diâmetro.
+        // Propriedades específicas do Círculo
+        this.diametro = config.diametro;
+        this.reactsToCollision = config.reactsToCollision;
+        this.collisionHandlers = config.collisionHandlers;
+        
+        // Propriedades internas para a física de colisão (AABB)
         this.largura = this.diametro;
         this.altura = this.diametro;
 
         this.updateAppearance();
     }
-    
-    /**
-     * Extrai as coordenadas de um evento de mouse ou toque.
-     * @param {MouseEvent | TouchEvent} event - O evento do DOM.
-     * @returns {{x: number, y: number}} - As coordenadas do cliente.
-     */
-    getEventCoords(event) {
-        if (event.touches && event.touches.length > 0) {
-            return { x: event.touches[0].clientX, y: event.touches[0].clientY };
-        }
-        return { x: event.clientX, y: event.clientY };
-    }
-
-    /**
-     * Cria o elemento DIV no DOM que representa o círculo.
-     */
-    criarElemento() {
-        this.elementoHTML = document.createElement('div');
-        this.elementoHTML.classList.add('draggable', 'object-shape');
-        this.elementoHTML.style.borderRadius = '50%';
-
-        // Listeners para mouse
-        this.elementoHTML.addEventListener('mousedown', this.iniciarArrasto.bind(this));
-        this.elementoHTML.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-        
-        // Listeners para toque
-        this.elementoHTML.addEventListener('touchstart', this.iniciarArrasto.bind(this), { passive: false });
-        
-        // Listeners globais
-        document.addEventListener('mousemove', this.arrastar.bind(this));
-        document.addEventListener('touchmove', this.arrastar.bind(this), { passive: false });
-        
-        document.addEventListener('mouseup', this.pararArrasto.bind(this));
-        document.addEventListener('touchend', this.pararArrasto.bind(this));
-
-        this.scene.appendChild(this.elementoHTML);
-    }
-    
-    handleDoubleClick(e) {
-        e.stopPropagation();
-        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { objects: [] };
-        const currentData = appData.objects.find(d => d.id === this.id);
-        if (currentData) {
-            this.openFormCallback(currentData, this.type);
-        }
-    }
-
 
     /**
      * Atualiza a aparência visual (posição, tamanho, cor, z-index) do círculo.
@@ -98,7 +56,6 @@ export default class Circulo {
     updateAppearance() {
         if (!this.elementoHTML) return;
 
-        this.elementoHTML.id = this.id;
         this.elementoHTML.style.zIndex = this.view;
 
         const cssLeft = this.x;
@@ -117,72 +74,19 @@ export default class Circulo {
             this.elementoHTML.style.backgroundColor = corAtual;
         }
     }
-
-    /**
-     * Remove o elemento do DOM.
-     */
-    destroy() {
-        if (this.elementoHTML) this.elementoHTML.remove();
-    }
-
-    // --- LÓGICA DE DRAG AND DROP ---
-    iniciarArrasto(event) {
-        if (event.type === 'touchstart') event.preventDefault();
-        this.isDragging = true;
-        this.dragged = false;
-        this.elementoHTML.style.zIndex = 1000;
-        
-        const coords = this.getEventCoords(event);
-        const rect = this.elementoHTML.getBoundingClientRect();
-        this.offsetX = coords.x - rect.left;
-        this.offsetY = coords.y - rect.top;
-    }
-
+    
+    // Sobrescreve o método arrastar para atualizar as coordenadas na UI
     arrastar(event) {
-        if (!this.isDragging) return;
-        if (event.type === 'touchmove') event.preventDefault();
-        
-        this.dragged = true;
-        const coords = this.getEventCoords(event);
-        const sceneRect = this.scene.getBoundingClientRect();
-        const newCssLeft = coords.x - sceneRect.left - this.offsetX;
-        const newCssTop = coords.y - sceneRect.top - this.offsetY;
-
-        this.x = Math.round(newCssLeft);
-        this.y = Math.round(this.scene.clientHeight - newCssTop - this.diametro);
-
-        this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - this.diametro));
-        this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - this.diametro));
-
-        this.coordinatesSpan.textContent = `X, Y: ${this.x}, ${this.y}`;
-
-        const appData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
-        appData.objects = appData.objects.map(d => {
-            if (d.id === this.id) {
-                return { ...d, x: this.x, y: this.y };
-            }
-            return d;
-        });
-        localStorage.setItem(this.storageKey, JSON.stringify(appData));
-        
-        this.updateAppearance();
+        super.arrastar(event); // Executa a lógica de arrasto da classe base
+        if (this.isDragging) {
+            this.coordinatesSpan.textContent = `Coordenadas (X, Y): ${this.x}, ${this.y}`;
+        }
     }
 
-    pararArrasto(event) {
-        if (!this.isDragging) return;
-        
-        if (event.type === 'touchend' && !this.dragged) {
-            const now = Date.now();
-            if (now - this.lastTap < 300) {
-                this.handleDoubleClick(event);
-            }
-            this.lastTap = now;
-        }
-
-        this.isDragging = false;
-        this.elementoHTML.style.zIndex = this.view; // Retorna para a view definida
-        if (this.coordinatesSpan) {
-            this.coordinatesSpan.textContent = `X, Y: ...`;
-        }
+    // Sobrescreve o método para limpar as coordenadas na UI
+    pararArrasto() {
+        super.pararArrasto();
+        this.coordinatesSpan.textContent = `Coordenadas (X, Y): ...`;
     }
 }
+

@@ -31,11 +31,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Botão Limpar Cena no canto superior direito -->
-        <div class="absolute top-4 right-4">
-            <button id="clear-scene-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg shadow-md transition-colors font-semibold">Limpar Cena</button>
-        </div>
     </div>
 
     <!-- Formulário Modal -->
@@ -94,56 +89,51 @@
 
                 <!-- Campos compartilhados por Retângulo e Círculo -->
                  <div id="shape-common-fields" class="hidden space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="cor" class="block text-sm font-medium text-gray-300">Cor (RGBA)</label>
-              <input type="text" name="cor" id="cor" class="mt-1 block w-full bg-gray-600 border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-white sm:text-sm" value="rgba(59, 130, 246, 1)">
-            </div>
-            <div>
-              <label for="cor-colisao" class="block text-sm font-medium text-gray-300">Cor Colisão (RGBA)</label>
-              <input type="text" name="cor-colisao" id="cor-colisao" class="mt-1 block w-full bg-gray-600 border-gray-500 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-white sm:text-sm" value="rgba(239, 68, 68, 1)">
-            </div>
-          </div>
-          <div class="flex items-center">
-            <input id="reacts-to-collision" name="reacts-to-collision" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-            <label for="reacts-to-collision" class="ml-3 block text-sm font-medium text-gray-300">Reage à colisão (muda de cor)</label>
-          </div>
-          <div class="flex items-center">
-            <input id="is-obstacle" name="is-obstacle" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-            <label for="is-obstacle" class="ml-3 block text-sm font-medium text-gray-300">Servir de obstáculo (barreira física)</label>
-          </div>
-        </div>
+                     <div class="grid grid-cols-2 gap-4">
+                         <div>
+                             <label for="cor" class="block text-sm font-medium text-gray-400">Cor (RGBA)</label>
+                             <input type="text" id="cor" value="rgba(59, 130, 246, 1)" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                         </div>
+                         <div>
+                             <label for="cor-colisao" class="block text-sm font-medium text-gray-400">Cor Colisão (RGBA)</label>
+                             <input type="text" id="cor-colisao" value="rgba(239, 68, 68, 1)" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                         </div>
+                     </div>
+                     <div class="flex items-center">
+                         <input type="checkbox" id="reacts-to-collision" class="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                         <label for="reacts-to-collision" class="ml-2 block text-sm">Reage à colisão</label>
+                     </div>
+                 </div>
 
-                        <!-- Campos para Slider -->
-                        <div id="slider-fields" class="hidden space-y-4">
-                            <div>
-                                <label for="target-object" class="block text-sm font-medium text-gray-400">Objeto Alvo</label>
-                                <select id="target-object" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
-                                    <!-- Options will be populated by JS -->
-                                </select>
-                            </div>
-                            <div>
-                                <label for="target-property" class="block text-sm font-medium text-gray-400">Propriedade Alvo</label>
-                                <select id="target-property" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
-                                    <option value="x">Posição X</option>
-                                    <option value="y">Posição Y</option>
-                                    <option value="largura">Largura</option>
-                                    <option value="altura">Altura</option>
-                                    <option value="diametro">Diâmetro</option>
-                                    <option value="rotation">Rotação</option>
-                                </select>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="min-value" class="block text-sm font-medium text-gray-400">Valor Mínimo</label>
-                                    <input type="number" id="min-value" value="0" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
-                                </div>
-                                <div>
-                                    <label for="max-value" class="block text-sm font-medium text-gray-400">Valor Máximo</label>
-                                    <input type="number" id="max-value" value="500" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
-                                </div>
-                            </div>
+                <!-- Campos do Slider -->
+                <div id="slider-fields" class="hidden space-y-4">
+                    <div>
+                        <label for="target-object" class="block text-sm font-medium text-gray-400">Objeto Alvo</label>
+                        <select id="target-object" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3"></select>
+                    </div>
+                    <div>
+                        <label for="target-property" class="block text-sm font-medium text-gray-400">Propriedade Alvo</label>
+                        <select id="target-property" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                            <option value="x">Posição X</option>
+                            <option value="y">Posição Y</option>
+                            <option value="largura">Largura</option>
+                            <option value="altura">Altura</option>
+                             <option value="diametro">Diâmetro</option>
+                            <option value="rotation">Rotação</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="min-value" class="block text-sm font-medium text-gray-400">Valor Mínimo</label>
+                            <input type="number" id="min-value" value="0" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
                         </div>
+                        <div>
+                            <label for="max-value" class="block text-sm font-medium text-gray-400">Valor Máximo</label>
+                            <input type="number" id="max-value" value="500" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Botões de Ação -->
                 <div class="flex justify-between items-center pt-4">
                     <div>
@@ -161,20 +151,10 @@
     
     <!-- Tabela Modal -->
     <div id="table-modal-container" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-7xl border border-gray-700 flex flex-col">
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-6xl border border-gray-700 flex flex-col">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">Gerenciador de Objetos</h2>
                 <button id="close-table-btn" class="text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
-            </div>
-            <!-- Botões de Importar/Exportar -->
-            <div class="flex items-center space-x-4 mb-4 p-4 bg-gray-700 rounded-lg">
-                <div>
-                    <button id="download-json-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium">Baixar JSON</button>
-                </div>
-                <div>
-                    <label for="upload-json-input" class="block text-sm font-medium text-gray-300">Carregar JSON</label>
-                    <input type="file" id="upload-json-input" accept=".json" class="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                </div>
             </div>
             <div class="overflow-auto max-h-[70vh]">
                 <table id="objects-table" class="w-full text-sm text-left table-auto">

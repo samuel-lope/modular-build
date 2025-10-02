@@ -1,6 +1,7 @@
 import Retangulo from './objects/Retangulo.js';
 import Circulo from './objects/Circulo.js';
 import Slider from './objects/Slider.js';
+// A classe base não precisa ser importada aqui, pois as classes filhas já a conhecem.
 
 // --- REGISTRO DE TIPOS DE OBJETO ---
 const objectTypeRegistry = {
@@ -8,7 +9,6 @@ const objectTypeRegistry = {
         class: Retangulo,
         displayName: 'Retângulo',
         buttonClass: 'bg-blue-600 hover:bg-blue-700',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>`,
         formFieldsId: 'rect-fields',
         commonFieldsId: 'shape-common-fields'
     },
@@ -16,7 +16,6 @@ const objectTypeRegistry = {
         class: Circulo,
         displayName: 'Círculo',
         buttonClass: 'bg-green-600 hover:bg-green-700',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>`,
         formFieldsId: 'circle-fields',
         commonFieldsId: 'shape-common-fields'
     },
@@ -24,7 +23,6 @@ const objectTypeRegistry = {
         class: Slider,
         displayName: 'Slider',
         buttonClass: 'bg-purple-600 hover:bg-purple-700',
-        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
         formFieldsId: 'slider-fields',
         commonFieldsId: null
     }
@@ -149,14 +147,11 @@ function openForm(config = null, type) {
 
     // Esconde todos os grupos de campos específicos
     Object.values(objectTypeRegistry).forEach(typeInfo => {
-        if(typeInfo.formFieldsId) {
-            const el = document.getElementById(typeInfo.formFieldsId);
-            if (el) el.classList.add('hidden');
-        }
-        if(typeInfo.commonFieldsId) {
-            const el = document.getElementById(typeInfo.commonFieldsId);
-            if (el) el.classList.add('hidden');
-        }
+        const fieldsElement = typeInfo.formFieldsId ? document.getElementById(typeInfo.formFieldsId) : null;
+        if (fieldsElement) fieldsElement.classList.add('hidden');
+
+        const commonFieldsElement = typeInfo.commonFieldsId ? document.getElementById(typeInfo.commonFieldsId) : null;
+        if (commonFieldsElement) commonFieldsElement.classList.add('hidden');
     });
 
     const { objects: objectsData } = loadAppDataFromStorage();
@@ -164,15 +159,12 @@ function openForm(config = null, type) {
     if (!typeInfo) return;
 
     // Mostra os campos relevantes para o tipo de objeto
-    if (typeInfo.formFieldsId) {
-        const el = document.getElementById(typeInfo.formFieldsId);
-        if (el) el.classList.remove('hidden');
-    }
-    if (typeInfo.commonFieldsId) {
-        const el = document.getElementById(typeInfo.commonFieldsId);
-        if (el) el.classList.remove('hidden');
-    }
+    const fieldsElement = typeInfo.formFieldsId ? document.getElementById(typeInfo.formFieldsId) : null;
+    if (fieldsElement) fieldsElement.classList.remove('hidden');
 
+    const commonFieldsElement = typeInfo.commonFieldsId ? document.getElementById(typeInfo.commonFieldsId) : null;
+    if (commonFieldsElement) commonFieldsElement.classList.remove('hidden');
+    
     if (config) { // Modo Edição
         formTitle.textContent = `Editar ${typeInfo.displayName}`;
         objectIdInput.value = config.id;
@@ -278,8 +270,6 @@ function getConfigFromForm() {
     } else if (type === 'slider') {
          return {
             ...commonConfig,
-            largura: 300,
-            altura: 50,
             targetId: document.getElementById('target-object').value,
             targetProperty: document.getElementById('target-property').value,
             min: parseFloat(document.getElementById('min-value').value) || 0,
@@ -465,42 +455,43 @@ function createObjectInstance(config) {
     const typeInfo = objectTypeRegistry[config.type];
     if (!typeInfo) return;
 
-    let newObject;
     const ObjectClass = typeInfo.class;
-
-    if (config.type === 'slider') {
-        newObject = new ObjectClass(scene, config, allObjects, openForm, STORAGE_KEY);
-    } else {
-        newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
+    let newObject;
+    
+    switch (config.type) {
+        case 'slider':
+            newObject = new ObjectClass(scene, config, allObjects, openForm, STORAGE_KEY);
+            break;
+        
+        case 'retangulo':
+        case 'circulo':
+            newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
+            break;
+        
+        default:
+            console.error(`Tipo de objeto desconhecido: ${config.type}`);
+            return;
     }
+
     allObjects.push(newObject);
 }
 
+
 function generateAddButtons() {
-    const isMobile = !!document.querySelector('#ui-controls.bottom-0');
+    addButtonsContainer.innerHTML = '';
+    const manageBtn = document.createElement('button');
+    manageBtn.id = 'manage-objects-btn';
+    manageBtn.className = 'px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg shadow-md transition-colors font-semibold';
+    manageBtn.textContent = 'Gerenciar Objetos';
+    manageBtn.addEventListener('click', openObjectsTable);
+    addButtonsContainer.appendChild(manageBtn);
 
-    if (isMobile) {
-        addButtonsContainer.innerHTML = '';
-        for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
-            const button = document.createElement('button');
-            button.innerHTML = typeInfo.icon;
-            button.className = `w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${typeInfo.buttonClass}`;
-            button.title = `Adicionar ${typeInfo.displayName}`;
-            button.addEventListener('click', () => openForm(null, type));
-            addButtonsContainer.appendChild(button);
-        }
-        // Atualiza o botão de gerenciar para ícone
-        manageObjectsBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path></svg>`;
-        manageObjectsBtn.title = 'Gerenciar Objetos';
-
-    } else { // Desktop
-        for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
-            const button = document.createElement('button');
-            button.textContent = `Adicionar ${typeInfo.displayName}`;
-            button.className = `px-4 py-2 rounded-lg shadow-md transition-colors font-semibold ${typeInfo.buttonClass}`;
-            button.addEventListener('click', () => openForm(null, type));
-            addButtonsContainer.prepend(button);
-        }
+    for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
+        const button = document.createElement('button');
+        button.textContent = `Adicionar ${typeInfo.displayName}`;
+        button.className = `px-4 py-2 rounded-lg shadow-md transition-colors font-semibold ${typeInfo.buttonClass}`;
+        button.addEventListener('click', () => openForm(null, type));
+        addButtonsContainer.prepend(button);
     }
 }
 
@@ -509,20 +500,16 @@ function init() {
     
     generateAddButtons();
     
-    // Aplica o tema
     scene.style.backgroundColor = appData.theme.backgroundColor;
     bgColorPicker.value = appData.theme.backgroundColor;
 
-    // Carrega os objetos
     appData.objects.forEach(data => createObjectInstance(data));
     
-    // Configura os event listeners
     cancelBtn.addEventListener('click', closeForm);
     deleteBtn.addEventListener('click', handleDelete);
     duplicateBtn.addEventListener('click', handleDuplicate);
     objectForm.addEventListener('submit', handleFormSubmit);
 
-    manageObjectsBtn.addEventListener('click', openObjectsTable);
     closeTableBtn.addEventListener('click', closeObjectsTable);
 
     bgColorPicker.addEventListener('input', (event) => {
@@ -538,3 +525,4 @@ function init() {
 
 // --- PONTO DE ENTRADA ---
 init();
+
