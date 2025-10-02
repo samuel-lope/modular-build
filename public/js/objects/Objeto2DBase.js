@@ -1,3 +1,5 @@
+// File location: objects/Objeto2DBase.js
+
 /**
  * Classe base para todos os objetos 2D arrastáveis na cena.
  * Contém toda a lógica comum de criação, atualização, destruição e arrastar/soltar.
