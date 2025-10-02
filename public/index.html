@@ -15,16 +15,27 @@
             <!-- Objetos 2D serão adicionados aqui via JS -->
         </div>
 
+        <!-- Botões do Canto Superior Direito -->
+        <div class="absolute top-4 right-4 flex items-center gap-2 z-10">
+            <button id="download-json-btn" class="p-3 bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md transition-colors font-semibold">
+                <!-- O ícone será inserido via JS -->
+            </button>
+            <button id="manage-objects-btn" class="p-3 bg-gray-600 hover:bg-gray-500 rounded-lg shadow-md transition-colors font-semibold">
+                <!-- O ícone será inserido via JS -->
+            </button>
+            <button id="clear-scene-btn" title="Limpar Cena" class="p-3 bg-red-600 hover:bg-red-700 rounded-lg shadow-md transition-colors font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+        </div>
+
         <!-- Controles da UI -->
         <div id="ui-controls" class="absolute top-4 left-4 flex flex-col space-y-2">
             <!-- Container para os botões de adicionar objetos, que serão gerados dinamicamente -->
             <div id="add-buttons-container" class="flex flex-wrap items-center gap-2">
-                 <button id="manage-objects-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg shadow-md transition-colors font-semibold">
-                    Gerenciar Objetos
-                </button>
+                 <!-- Botões de adicionar são inseridos aqui via JS -->
             </div>
              <div class="bg-gray-900 bg-opacity-70 text-sm rounded-lg px-3 py-2 shadow-lg flex items-center space-x-4">
-                <span id="coords">Coordenadas (X, Y): ...</span>
+                <span id="coords">(x, y): ...</span>
                 <div class="flex items-center space-x-2">
                     <label for="bg-color-picker" class="font-medium">Fundo:</label>
                     <input type="color" id="bg-color-picker" class="w-7 h-7">
@@ -103,6 +114,10 @@
                          <input type="checkbox" id="reacts-to-collision" class="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
                          <label for="reacts-to-collision" class="ml-2 block text-sm">Reage à colisão</label>
                      </div>
+                     <div class="flex items-center">
+                        <input type="checkbox" id="is-obstacle" class="h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                        <label for="is-obstacle" class="ml-2 block text-sm">É uma barreira (intransponível)</label>
+                    </div>
                  </div>
 
                 <!-- Campos do Slider -->

@@ -32,6 +32,10 @@ export default class Objeto2DBase {
         this.isDragging = false;
         this.offsetX = 0;
         this.offsetY = 0;
+
+        // Dependências injetadas para checagem de colisão com obstáculos
+        this.allObjects = null;
+        this.collisionChecker = null;
     }
 
     /**
@@ -42,6 +46,7 @@ export default class Objeto2DBase {
     update(config) {
         Object.assign(this, config);
         this.view = config.view || 0;
+        this.isObstacle = config.isObstacle || false; // Garante que a propriedade seja atualizada
     }
 
     /**
@@ -113,18 +118,47 @@ export default class Objeto2DBase {
         const clientY = event.type.startsWith('touch') ? event.touches[0].clientY : event.clientY;
 
         const sceneRect = this.scene.getBoundingClientRect();
-        const newCssLeft = clientX - sceneRect.left - this.offsetX;
-        const newCssTop = clientY - sceneRect.top - this.offsetY;
+        let newCssLeft = clientX - sceneRect.left - this.offsetX;
+        let newCssTop = clientY - sceneRect.top - this.offsetY;
         
         const larguraObjeto = this.largura || this.diametro || this.elementoHTML.clientWidth;
         const alturaObjeto = this.altura || this.diametro || this.elementoHTML.clientHeight;
 
-        this.x = Math.round(newCssLeft);
-        this.y = Math.round(this.scene.clientHeight - newCssTop - alturaObjeto);
+        let newX = Math.round(newCssLeft);
+        let newY = Math.round(this.scene.clientHeight - newCssTop - alturaObjeto);
 
         // Limita o movimento à cena
-        this.x = Math.max(0, Math.min(this.x, this.scene.clientWidth - larguraObjeto));
-        this.y = Math.max(0, Math.min(this.y, this.scene.clientHeight - alturaObjeto));
+        newX = Math.max(0, Math.min(newX, this.scene.clientWidth - larguraObjeto));
+        newY = Math.max(0, Math.min(newY, this.scene.clientHeight - alturaObjeto));
+
+        // --- LÓGICA DA BARREIRA ---
+        if (this.allObjects && this.collisionChecker) {
+            const obstacles = this.allObjects.filter(obj => obj.isObstacle && obj.id !== this.id);
+            if (obstacles.length > 0) {
+                const ghost = { 
+                    ...this, 
+                    x: newX, 
+                    y: newY, 
+                    largura: this.largura || this.diametro, 
+                    altura: this.altura || this.diametro 
+                };
+
+                let collisionDetected = false;
+                for (const obstacle of obstacles) {
+                    if (this.collisionChecker(ghost, obstacle)) {
+                        collisionDetected = true;
+                        break;
+                    }
+                }
+
+                if (collisionDetected) {
+                    return; // Impede o movimento
+                }
+            }
+        }
+
+        this.x = newX;
+        this.y = newY;
 
         this.salvarPosicaoNoStorage();
         this.updateAppearance();

@@ -44,6 +44,10 @@ const duplicateBtn = document.getElementById('duplicate-btn');
 const objectIdInput = document.getElementById('object-id');
 const objectTypeInput = document.getElementById('object-type');
 
+// --- ELEMENTOS DA UI GERAL ---
+const clearSceneBtn = document.getElementById('clear-scene-btn');
+const downloadJsonBtn = document.getElementById('download-json-btn');
+
 // --- ELEMENTOS DA TABELA ---
 const manageObjectsBtn = document.getElementById('manage-objects-btn');
 const tableModalContainer = document.getElementById('table-modal-container');
@@ -55,6 +59,17 @@ let isCollisionDetectionActive = true;
 const allObjects = []; // Array para armazenar as instâncias dos objetos
 const STORAGE_KEY = 'interactive_2d_app_data_v1';
 const DEFAULT_THEME = { backgroundColor: '#374151' };
+
+// --- ÍCONES PARA OS BOTÕES ---
+const objectIcons = {
+    retangulo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>`,
+    circulo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle></svg>`,
+    slider: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><circle cx="8" cy="9" r="2"></circle><circle cx="16" cy="15" r="2"></circle></svg>`,
+    manage: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`
+};
+const uiIcons = {
+    download: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`
+};
 
 /**
  * Lê os dados da aplicação do localStorage.
@@ -190,10 +205,12 @@ function openForm(config = null, type) {
             document.getElementById('cor').value = config.collisionHandlers.onNoCollision.cor;
             document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
             document.getElementById('reacts-to-collision').checked = config.reactsToCollision;
+            document.getElementById('is-obstacle').checked = config.isObstacle || false;
         } else {
              document.getElementById('cor').value = 'rgba(59, 130, 246, 1)';
              document.getElementById('cor-colisao').value = 'rgba(239, 68, 68, 1)';
              document.getElementById('reacts-to-collision').checked = true;
+             document.getElementById('is-obstacle').checked = false;
         }
     }
     
@@ -247,6 +264,7 @@ function getConfigFromForm() {
     
     const shapeCommonConfig = {
         reactsToCollision: document.getElementById('reacts-to-collision').checked,
+        isObstacle: document.getElementById('is-obstacle').checked,
         collisionHandlers: {
             onCollision: { cor: document.getElementById('cor-colisao').value },
             onNoCollision: { cor: document.getElementById('cor').value }
@@ -466,6 +484,9 @@ function createObjectInstance(config) {
         case 'retangulo':
         case 'circulo':
             newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
+            // Injeta dependências para a lógica de colisão com obstáculos
+            newObject.allObjects = allObjects;
+            newObject.collisionChecker = checkAABBCollision;
             break;
         
         default:
@@ -478,27 +499,52 @@ function createObjectInstance(config) {
 
 
 function generateAddButtons() {
-    addButtonsContainer.innerHTML = '';
-    const manageBtn = document.createElement('button');
-    manageBtn.id = 'manage-objects-btn';
-    manageBtn.className = 'px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg shadow-md transition-colors font-semibold';
-    manageBtn.textContent = 'Gerenciar Objetos';
-    manageBtn.addEventListener('click', openObjectsTable);
-    addButtonsContainer.appendChild(manageBtn);
+    addButtonsContainer.innerHTML = ''; // Limpa apenas o container de adicionar
 
+    // Itera sobre o registro de tipos de objeto para criar os botões de adicionar
     for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
         const button = document.createElement('button');
-        button.textContent = `Adicionar ${typeInfo.displayName}`;
-        button.className = `px-4 py-2 rounded-lg shadow-md transition-colors font-semibold ${typeInfo.buttonClass}`;
+        const displayName = `Adicionar ${typeInfo.displayName}`;
+        button.title = displayName;
+        button.innerHTML = objectIcons[type];
+        // As classes de estilo são adaptadas para botões de ícone
+        button.className = `p-3 rounded-lg shadow-md transition-colors font-semibold ${typeInfo.buttonClass}`;
         button.addEventListener('click', () => openForm(null, type));
-        addButtonsContainer.prepend(button);
+        addButtonsContainer.prepend(button); // Adiciona ao container específico
     }
 }
 
 function init() {
     const appData = loadAppDataFromStorage();
     
+    // Gera os botões de adicionar objetos dinamicamente
     generateAddButtons();
+
+    // Configura o botão de Gerenciar Objetos, que existe em ambas as páginas
+    if (manageObjectsBtn) {
+        manageObjectsBtn.innerHTML = objectIcons.manage;
+        manageObjectsBtn.title = 'Gerenciar Objetos';
+        manageObjectsBtn.addEventListener('click', openObjectsTable);
+    }
+
+    // Configura o botão de Download JSON
+    if (downloadJsonBtn) {
+        downloadJsonBtn.innerHTML = uiIcons.download;
+        downloadJsonBtn.title = 'Baixar JSON';
+        downloadJsonBtn.addEventListener('click', () => {
+            const appData = loadAppDataFromStorage();
+            const jsonString = JSON.stringify(appData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cena-2d-export.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
     
     scene.style.backgroundColor = appData.theme.backgroundColor;
     bgColorPicker.value = appData.theme.backgroundColor;
@@ -511,6 +557,15 @@ function init() {
     objectForm.addEventListener('submit', handleFormSubmit);
 
     closeTableBtn.addEventListener('click', closeObjectsTable);
+
+    clearSceneBtn.addEventListener('click', () => {
+        if (confirm('Tem certeza que deseja limpar todos os objetos da cena? Esta ação não pode ser desfeita.')) {
+            const appData = loadAppDataFromStorage();
+            appData.objects = [];
+            saveAppDataToStorage(appData);
+            location.reload();
+        }
+    });
 
     bgColorPicker.addEventListener('input', (event) => {
         const newColor = event.target.value;
