@@ -2,6 +2,7 @@ import Retangulo from './objects/Retangulo.js';
 import Circulo from './objects/Circulo.js';
 import Slider from './objects/Slider.js';
 import Grupo from './objects/Grupo.js';
+import Condicional from './objects/Condicional.js';
 
 // --- REGISTRO DE TIPOS DE OBJETO ---
 const objectTypeRegistry = {
@@ -17,6 +18,13 @@ const objectTypeRegistry = {
         displayName: 'Círculo',
         buttonClass: 'bg-green-600 hover:bg-green-700',
         formFieldsId: 'circle-fields',
+        commonFieldsId: 'shape-common-fields'
+    },
+    'condicional': {
+        class: Condicional,
+        displayName: 'Condicional',
+        buttonClass: 'bg-yellow-500 hover:bg-yellow-600',
+        formFieldsId: 'conditional-fields',
         commonFieldsId: 'shape-common-fields'
     },
     'slider': {
@@ -72,6 +80,7 @@ const DEFAULT_THEME = { backgroundColor: '#374151' };
 const objectIcons = {
     retangulo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>`,
     circulo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle></svg>`,
+    condicional: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 12l10 10 10-10L12 2z"></path></svg>`,
     slider: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><circle cx="8" cy="9" r="2"></circle><circle cx="16" cy="15" r="2"></circle></svg>`,
     manage: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`
 };
@@ -125,8 +134,10 @@ function checkAABBCollision(objA, objB) {
  * Loop principal da aplicação.
  */
 function gameLoop() {
-    const collidableObjects = allObjects.filter(obj => ['retangulo', 'circulo'].includes(obj.type));
+    const collidableObjects = allObjects.filter(obj => ['retangulo', 'circulo', 'condicional'].includes(obj.type));
+    const conditionalObjects = allObjects.filter(obj => obj.type === 'condicional');
 
+    // --- LÓGICA DE COLISÃO ---
     if (isCollisionDetectionActive) {
         collidableObjects.forEach(obj => { obj.isColliding = false; });
 
@@ -143,6 +154,21 @@ function gameLoop() {
         }
         collidableObjects.forEach(obj => { obj.updateAppearance(); });
     }
+
+    // --- LÓGICA CONDICIONAL ---
+    if (conditionalObjects.length > 0) {
+        conditionalObjects.forEach(condObj => {
+            const targetObject = allObjects.find(obj => obj.id === condObj.conditionTargetId);
+            if (targetObject) {
+                if (condObj.checkCondition(targetObject)) {
+                    condObj.applyTransformation();
+                } else {
+                    condObj.resetTransformation();
+                }
+            }
+        });
+    }
+
     requestAnimationFrame(gameLoop);
 }
 
@@ -153,8 +179,7 @@ function populateTargetObjectDropdown(currentId) {
     targetObjectSelect.innerHTML = '';
     
     const { objects: objectsData } = loadAppDataFromStorage();
-    // Agora inclui retângulos, círculos e grupos como alvos possíveis
-    const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo', 'grupo'].includes(obj.type));
+    const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo', 'grupo', 'condicional'].includes(obj.type));
 
     availableTargets.forEach(target => {
         const option = document.createElement('option');
@@ -210,7 +235,7 @@ function openForm(config = null, type) {
     }
     
     // Lógica específica para preencher valores do formulário
-    if (type === 'retangulo' || type === 'circulo') {
+    if (type === 'retangulo' || type === 'circulo' || type === 'condicional') {
         if (config) {
             document.getElementById('cor').value = config.collisionHandlers.onNoCollision.cor;
             document.getElementById('cor-colisao').value = config.collisionHandlers.onCollision.cor;
@@ -224,25 +249,32 @@ function openForm(config = null, type) {
         }
     }
     
-    if (type === 'retangulo') {
+    if (type === 'retangulo' || type === 'condicional') {
+        if (type === 'condicional') {
+             document.getElementById('rect-fields').classList.remove('hidden');
+        }
         if (config) {
             document.getElementById('largura').value = config.largura;
             document.getElementById('altura').value = config.altura;
             document.getElementById('rotation').value = (config.rotation || 0) * (180 / Math.PI);
         } else {
-             document.getElementById('object-name').value = 'Novo Retângulo';
+             document.getElementById('object-name').value = type === 'condicional' ? 'Novo Condicional' : 'Novo Retângulo';
              document.getElementById('largura').value = 150;
              document.getElementById('altura').value = 80;
              document.getElementById('rotation').value = 0;
         }
-    } else if (type === 'circulo') {
+    } 
+    
+    if (type === 'circulo') {
         if (config) {
             document.getElementById('diametro').value = config.diametro;
         } else {
             document.getElementById('object-name').value = 'Novo Círculo';
             document.getElementById('diametro').value = 100;
         }
-    } else if (type === 'slider') {
+    } 
+    
+    if (type === 'slider') {
         populateTargetObjectDropdown(config ? config.targetId : null);
         if (config) {
             document.getElementById('target-property').value = config.targetProperty;
@@ -252,6 +284,21 @@ function openForm(config = null, type) {
             document.getElementById('object-name').value = 'Novo Slider';
         }
     }
+
+    if (type === 'condicional') {
+        populateConditionalTargetDropdown(config ? config.conditionTargetId : null);
+        if (config) {
+            document.getElementById('condition-property').value = config.conditionProperty || 'x';
+            document.getElementById('condition-operator').value = config.conditionOperator || '==';
+            document.getElementById('condition-value').value = config.conditionValue !== undefined ? config.conditionValue : 0;
+            document.getElementById('transformation-type').value = config.transformationType || 'changeColor';
+        } else {
+            document.getElementById('object-name').value = 'Novo Condicional';
+        }
+        updateTransformationValueFields(config ? config.transformationType : 'changeColor', config ? config.transformationValue : null);
+    }
+
+    document.getElementById('transformation-type').onchange = (e) => updateTransformationValueFields(e.target.value, null);
 
     formContainer.classList.remove('hidden');
 }
@@ -304,8 +351,33 @@ function getConfigFromForm() {
             max: parseFloat(document.getElementById('max-value').value) || 100,
         };
     } else if (type === 'grupo') {
-        // Grupos usam apenas os campos comuns no formulário
         return commonConfig;
+    } else if (type === 'condicional') {
+        let transformationValue;
+        const transformationType = document.getElementById('transformation-type').value;
+        if (transformationType === 'changeColor') {
+            transformationValue = { color: document.getElementById('transformation-value-color').value };
+        } else if (transformationType === 'changePosition') {
+            transformationValue = {
+                x: parseInt(document.getElementById('transformation-value-x').value, 10),
+                y: parseInt(document.getElementById('transformation-value-y').value, 10)
+            };
+        }
+
+        return {
+            ...commonConfig,
+            ...shapeCommonConfig,
+            largura: parseInt(document.getElementById('largura').value, 10) || 100,
+            altura: parseInt(document.getElementById('altura').value, 10) || 50,
+            rotation: (parseFloat(document.getElementById('rotation').value) || 0) * (Math.PI / 180),
+            // Lógica Condicional
+            conditionTargetId: document.getElementById('condition-target').value,
+            conditionProperty: document.getElementById('condition-property').value,
+            conditionOperator: document.getElementById('condition-operator').value,
+            conditionValue: parseFloat(document.getElementById('condition-value').value) || 0,
+            transformationType: transformationType,
+            transformationValue: transformationValue
+        };
     }
 }
 
@@ -313,35 +385,33 @@ function getConfigFromForm() {
 function handleFormSubmit(event) {
     event.preventDefault();
     const config = getConfigFromForm();
+    if (!config) return; 
     const id = config.id;
     
     const appData = loadAppDataFromStorage();
     const isEditing = appData.objects.some(obj => obj.id === id);
 
-            if (isEditing) {
-                const objectInstance = allObjects.find(obj => obj.id === id);
-                if (objectInstance) {
-                    objectInstance.update(config);
-    
-                    // Se for um grupo, as posições dos filhos foram atualizadas em memória.
-                    // Agora, precisamos refletir essas mudanças no array de dados antes de salvar.
-                    if (objectInstance.type === 'grupo') {
-                        objectInstance.childObjects.forEach(childInstance => {
-                            const childDataIndex = appData.objects.findIndex(d => d.id === childInstance.id);
-                            if (childDataIndex > -1) {
-                                appData.objects[childDataIndex].x = childInstance.x;
-                                appData.objects[childDataIndex].y = childInstance.y;
-                            }
-                        });
+    if (isEditing) {
+        const objectInstance = allObjects.find(obj => obj.id === id);
+        if (objectInstance) {
+            objectInstance.update(config);
+
+            if (objectInstance.type === 'grupo') {
+                objectInstance.childObjects.forEach(childInstance => {
+                    const childDataIndex = appData.objects.findIndex(d => d.id === childInstance.id);
+                    if (childDataIndex > -1) {
+                        appData.objects[childDataIndex].x = childInstance.x;
+                        appData.objects[childDataIndex].y = childInstance.y;
                     }
-                }
-                // Atualiza o objeto principal (grupo ou item)
-                appData.objects = appData.objects.map(data => (data.id === id ? config : data));
-    
-            } else {
-                appData.objects.push(config);
-                createObjectInstance(config);
-            }    
+                });
+            }
+        }
+        appData.objects = appData.objects.map(data => (data.id === id ? config : data));
+
+    } else {
+        appData.objects.push(config);
+        createObjectInstance(config);
+    }    
     saveAppDataToStorage(appData);
     closeForm();
 }
@@ -350,7 +420,6 @@ function deleteObjectById(idToDelete, typeToDelete) {
     const appData = loadAppDataFromStorage();
 
     if (typeToDelete === 'grupo') {
-        // Desagrupa os filhos antes de remover o grupo
         appData.objects = appData.objects.map(obj => {
             if (obj.groupId === idToDelete) {
                 const { groupId, ...rest } = obj;
@@ -360,17 +429,15 @@ function deleteObjectById(idToDelete, typeToDelete) {
         });
     }
 
-    // Remove o objeto principal (seja grupo ou item)
     appData.objects = appData.objects.filter(data => data.id !== idToDelete);
     
     saveAppDataToStorage(appData);
-    location.reload(); // Recarrega para atualizar a cena e a tabela
+    location.reload(); 
 }
 
 function handleDelete() {
     const idToDelete = objectIdInput.value;
     const typeToDelete = objectTypeInput.value;
-    // A confirmação pode ser adicionada aqui se desejado, ou no local da chamada
     deleteObjectById(idToDelete, typeToDelete);
 }
 
@@ -385,10 +452,9 @@ function openObjectsTable() {
     const tbody = objectsTable.querySelector('tbody');
     const groupBtn = document.getElementById('group-selected-btn');
 
-    thead.innerHTML = '<th class="px-4 py-3 w-12"></th>'; // Limpa e adiciona o header do checkbox
+    thead.innerHTML = '<th class="px-4 py-3 w-12"></th>';
     tbody.innerHTML = '';
 
-    // Atualiza o botão de agrupar para ser um ícone
     groupBtn.innerHTML = uiIcons.group;
     groupBtn.title = 'Agrupar Selecionados';
     groupBtn.className = 'p-2 rounded-lg shadow-md transition-colors font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed';
@@ -405,7 +471,6 @@ function openObjectsTable() {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-700 hover:bg-gray-700';
 
-        // Célula do Checkbox
         const checkboxCell = document.createElement('td');
         checkboxCell.className = 'px-4 py-2';
         const checkbox = document.createElement('input');
@@ -436,7 +501,7 @@ function openObjectsTable() {
                 case 'Rotação (°)': key = 'rotation'; break;
                 case 'Alvo ID': key = 'targetId'; break;
                 case 'Alvo Prop.': key = 'targetProperty'; break;
-                case 'Ações': key = 'actions'; break; // Chave para a nova coluna
+                case 'Ações': key = 'actions'; break;
             }
 
             if (key === 'actions') {
@@ -478,29 +543,17 @@ function openObjectsTable() {
             }
             row.appendChild(td);
         });
-
-        // REMOVIDO: Adiciona listener de duplo clique na linha para abrir o formulário de edição
-        // row.addEventListener('dblclick', () => {
-        //     const currentData = objectsData.find(d => d.id === obj.id);
-        //     if (currentData) {
-        //         closeObjectsTable(); // Fecha o modal da tabela primeiro
-        //         openForm(currentData, currentData.type);
-        //     }
-        // });
-
         tbody.appendChild(row);
     });
 
-    // Lógica para habilitar/desabilitar o botão de agrupar
     const checkboxes = tbody.querySelectorAll('.object-select-checkbox:not(:disabled)');
     const toggleGroupButton = () => {
         const selectedCount = tbody.querySelectorAll('.object-select-checkbox:checked').length;
         groupBtn.disabled = selectedCount < 2;
     };
     checkboxes.forEach(cb => cb.addEventListener('change', toggleGroupButton));
-    toggleGroupButton(); // Estado inicial
+    toggleGroupButton();
 
-    // Listener para o botão de agrupar
     groupBtn.addEventListener('click', handleGroupObjects);
 
     tableModalContainer.classList.remove('hidden');
@@ -522,7 +575,7 @@ function handleTableCellEdit(event) {
     
     let valueToSave = newValue;
     if (property === 'rotation') {
-        valueToSave = newValue * (Math.PI / 180); // Converte graus para radianos
+        valueToSave = newValue * (Math.PI / 180);
     }
 
     const appData = loadAppDataFromStorage();
@@ -547,9 +600,6 @@ function handleTableCellEdit(event) {
     }
 }
 
-/**
- * Lida com a lógica de agrupar objetos selecionados na tabela.
- */
 function handleGroupObjects() {
     const selectedIds = Array.from(document.querySelectorAll('#objects-table .object-select-checkbox:checked')).map(cb => cb.value);
 
@@ -561,7 +611,6 @@ function handleGroupObjects() {
     const appData = loadAppDataFromStorage();
     const selectedObjects = appData.objects.filter(obj => selectedIds.includes(obj.id));
 
-    // Calcula os limites do grupo
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     selectedObjects.forEach(obj => {
         const objMaxX = obj.x + (obj.largura || obj.diametro);
@@ -577,7 +626,6 @@ function handleGroupObjects() {
     const groupX = minX;
     const groupY = minY;
 
-    // Cria o novo grupo
     const groupId = `grupo_${Date.now()}`;
     const newGroup = {
         id: groupId,
@@ -588,10 +636,9 @@ function handleGroupObjects() {
         largura: groupWidth,
         altura: groupHeight,
         childIds: selectedIds,
-        view: Math.max(...selectedObjects.map(o => o.view)) + 1, // Garante que o grupo fique por cima
+        view: Math.max(...selectedObjects.map(o => o.view)) + 1,
     };
 
-    // Atualiza os objetos filhos com o ID do grupo
     appData.objects = appData.objects.map(obj => {
         if (selectedIds.includes(obj.id)) {
             return { ...obj, groupId: groupId };
@@ -599,11 +646,54 @@ function handleGroupObjects() {
         return obj;
     });
 
-    // Adiciona o grupo à lista de objetos
     appData.objects.push(newGroup);
 
     saveAppDataToStorage(appData);
-    location.reload(); // Recarrega a página para aplicar as mudanças
+    location.reload();
+}
+
+function populateConditionalTargetDropdown(currentId) {
+    const targetSelect = document.getElementById('condition-target');
+    targetSelect.innerHTML = '';
+    const { objects: objectsData } = loadAppDataFromStorage();
+    const availableTargets = objectsData.filter(obj => obj.type !== 'slider' && obj.type !== 'condicional');
+
+    availableTargets.forEach(target => {
+        const option = document.createElement('option');
+        option.value = target.id;
+        option.textContent = `${target.nome || 'Sem nome'} (${target.type})`;
+        if (target.id === currentId) {
+            option.selected = true;
+        }
+        targetSelect.appendChild(option);
+    });
+}
+
+function updateTransformationValueFields(type, value) {
+    const container = document.getElementById('transformation-value-container');
+    container.innerHTML = '';
+
+    if (type === 'changeColor') {
+        container.innerHTML = `
+            <div>
+                <label for="transformation-value-color" class="block text-sm font-medium text-gray-400">...para a cor</label>
+                <input type="text" id="transformation-value-color" value="${value ? value.color : 'rgba(0, 255, 0, 1)'}" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+            </div>
+        `;
+    } else if (type === 'changePosition') {
+        container.innerHTML = `
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="transformation-value-x" class="block text-sm font-medium text-gray-400">...para a Posição X</label>
+                    <input type="number" id="transformation-value-x" value="${value ? value.x : 100}" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                </div>
+                <div>
+                    <label for="transformation-value-y" class="block text-sm font-medium text-gray-400">...para a Posição Y</label>
+                    <input type="number" id="transformation-value-y" value="${value ? value.y : 100}" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3">
+                </div>
+            </div>
+        `;
+    }
 }
 
 
@@ -623,8 +713,8 @@ function createObjectInstance(config) {
         
         case 'retangulo':
         case 'circulo':
+        case 'condicional':
             newObject = new ObjectClass(scene, coordinatesSpan, config, openForm, STORAGE_KEY);
-            // Injeta dependências para a lógica de colisão com obstáculos
             newObject.allObjects = allObjects;
             newObject.collisionChecker = checkAABBCollision;
             break;
@@ -643,35 +733,31 @@ function createObjectInstance(config) {
 
 
 function generateAddButtons() {
-    addButtonsContainer.innerHTML = ''; // Limpa apenas o container de adicionar
+    addButtonsContainer.innerHTML = '';
 
-    // Itera sobre o registro de tipos de objeto para criar os botões de adicionar
     for (const [type, typeInfo] of Object.entries(objectTypeRegistry)) {
+        if (type === 'grupo') continue;
         const button = document.createElement('button');
         const displayName = `Adicionar ${typeInfo.displayName}`;
         button.title = displayName;
         button.innerHTML = objectIcons[type];
-        // As classes de estilo são adaptadas para botões de ícone
         button.className = `p-3 rounded-lg shadow-md transition-colors font-semibold ${typeInfo.buttonClass}`;
         button.addEventListener('click', () => openForm(null, type));
-        addButtonsContainer.prepend(button); // Adiciona ao container específico
+        addButtonsContainer.prepend(button);
     }
 }
 
 function init() {
     const appData = loadAppDataFromStorage();
     
-    // Gera os botões de adicionar objetos dinamicamente
     generateAddButtons();
 
-    // Configura o botão de Gerenciar Objetos, que existe em ambas as páginas
     if (manageObjectsBtn) {
         manageObjectsBtn.innerHTML = objectIcons.manage;
         manageObjectsBtn.title = 'Gerenciar Objetos';
         manageObjectsBtn.addEventListener('click', openObjectsTable);
     }
 
-    // Configura o botão de Download JSON
     if (downloadJsonBtn) {
         downloadJsonBtn.innerHTML = uiIcons.download;
         downloadJsonBtn.title = 'Baixar JSON';
@@ -690,7 +776,6 @@ function init() {
         });
     }
 
-    // Configura o botão de Importar JSON
     if (importJsonBtn && importJsonInput) {
         importJsonBtn.innerHTML = uiIcons.upload;
         importJsonBtn.title = 'Importar JSON';
@@ -703,10 +788,9 @@ function init() {
             reader.onload = (e) => {
                 try {
                     const importedData = JSON.parse(e.target.result);
-                    // Validação simples da estrutura do JSON
                     if (importedData && typeof importedData.theme === 'object' && Array.isArray(importedData.objects)) {
                         saveAppDataToStorage(importedData);
-                        location.reload(); // Recarrega para aplicar a nova cena
+                        location.reload();
                     } else {
                         alert('Erro: O arquivo JSON parece ser inválido ou não tem a estrutura esperada (theme, objects).');
                     }
@@ -715,7 +799,7 @@ function init() {
                 }
             };
             reader.readAsText(file);
-            event.target.value = null; // Reseta o input para permitir o re-upload do mesmo arquivo
+            event.target.value = null;
         });
     }
     
@@ -752,3 +836,4 @@ function init() {
 
 // --- PONTO DE ENTRADA ---
 init();
+
