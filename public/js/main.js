@@ -77,7 +77,9 @@ const objectIcons = {
 };
 const uiIcons = {
     download: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
-    upload: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`
+    upload: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
+    delete: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
+    group: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`
 };
 
 /**
@@ -344,33 +346,37 @@ function handleFormSubmit(event) {
     closeForm();
 }
 
-function handleDelete() {
-    const idToDelete = objectIdInput.value;
-    const typeToDelete = objectTypeInput.value;
-    
+function deleteObjectById(idToDelete, typeToDelete) {
     const appData = loadAppDataFromStorage();
 
     if (typeToDelete === 'grupo') {
-        // Lógica para desagrupar: remove o groupId dos filhos
+        // Desagrupa os filhos antes de remover o grupo
         appData.objects = appData.objects.map(obj => {
             if (obj.groupId === idToDelete) {
-                const { groupId, ...rest } = obj; // Cria um novo objeto sem a propriedade groupId
+                const { groupId, ...rest } = obj;
                 return rest;
             }
             return obj;
         });
     }
 
-    // Remove o objeto principal (seja grupo ou item normal)
+    // Remove o objeto principal (seja grupo ou item)
     appData.objects = appData.objects.filter(data => data.id !== idToDelete);
     
     saveAppDataToStorage(appData);
-    location.reload(); // Recarrega a página para remover instâncias e elementos da cena
+    location.reload(); // Recarrega para atualizar a cena e a tabela
+}
+
+function handleDelete() {
+    const idToDelete = objectIdInput.value;
+    const typeToDelete = objectTypeInput.value;
+    // A confirmação pode ser adicionada aqui se desejado, ou no local da chamada
+    deleteObjectById(idToDelete, typeToDelete);
 }
 
 // --- LÓGICA DA TABELA DE GERENCIAMENTO ---
 
-const tableHeaders = ['ID', 'Nome', 'Tipo', 'View', 'X', 'Y', 'Largura', 'Altura', 'Diâmetro', 'Rotação (°)', 'Alvo ID', 'Alvo Prop.'];
+const tableHeaders = ['ID', 'Nome', 'Tipo', 'View', 'X', 'Y', 'Largura', 'Altura', 'Diâmetro', 'Rotação (°)', 'Alvo ID', 'Alvo Prop.', 'Ações'];
 const editableProperties = ['nome', 'view', 'x', 'y', 'largura', 'altura', 'diametro', 'rotation', 'targetId', 'targetProperty'];
 
 function openObjectsTable() {
@@ -381,6 +387,11 @@ function openObjectsTable() {
 
     thead.innerHTML = '<th class="px-4 py-3 w-12"></th>'; // Limpa e adiciona o header do checkbox
     tbody.innerHTML = '';
+
+    // Atualiza o botão de agrupar para ser um ícone
+    groupBtn.innerHTML = uiIcons.group;
+    groupBtn.title = 'Agrupar Selecionados';
+    groupBtn.className = 'p-2 rounded-lg shadow-md transition-colors font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed';
 
     tableHeaders.forEach(headerText => {
         const th = document.createElement('th');
@@ -401,7 +412,6 @@ function openObjectsTable() {
         checkbox.type = 'checkbox';
         checkbox.value = obj.id;
         checkbox.className = 'object-select-checkbox w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500';
-        // Desabilita o checkbox para grupos ou objetos que já estão em um grupo
         if (obj.type === 'grupo' || obj.groupId) {
             checkbox.disabled = true;
         }
@@ -426,43 +436,57 @@ function openObjectsTable() {
                 case 'Rotação (°)': key = 'rotation'; break;
                 case 'Alvo ID': key = 'targetId'; break;
                 case 'Alvo Prop.': key = 'targetProperty'; break;
+                case 'Ações': key = 'actions'; break; // Chave para a nova coluna
             }
 
-            value = obj[key];
-            if (key === 'id' && obj.groupId) {
-                value = `${value} (G: ${obj.groupId.substring(0,4)})`;
-            }
-            if (key === 'rotation' && value !== undefined) {
-                value = (value * (180 / Math.PI)).toFixed(2); // Converte radianos para graus
-            }
-            
-            td.textContent = value !== undefined ? value : 'N/A';
-            td.dataset.objectId = obj.id;
-            td.dataset.property = key;
-
-            if (editableProperties.includes(key) && obj[key] !== undefined) {
-                td.contentEditable = true;
-                td.addEventListener('blur', handleTableCellEdit);
-                td.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        e.target.blur();
+            if (key === 'actions') {
+                const deleteButton = document.createElement('button');
+                deleteButton.innerHTML = uiIcons.delete;
+                deleteButton.title = 'Excluir Objeto';
+                deleteButton.className = 'p-1 text-red-500 hover:text-red-400';
+                deleteButton.addEventListener('click', () => {
+                    if (confirm(`Tem certeza que deseja excluir o objeto "${obj.nome || obj.id}"?`)) {
+                        deleteObjectById(obj.id, obj.type);
                     }
                 });
+                td.appendChild(deleteButton);
             } else {
-                 td.style.color = '#9ca3af'; // gray-400
-            }
+                value = obj[key];
+                if (key === 'id' && obj.groupId) {
+                    value = `${value} (G: ${obj.groupId.substring(0,4)})`;
+                }
+                if (key === 'rotation' && value !== undefined) {
+                    value = (value * (180 / Math.PI)).toFixed(2);
+                }
+                
+                td.textContent = value !== undefined ? value : 'N/A';
+                td.dataset.objectId = obj.id;
+                td.dataset.property = key;
 
+                if (editableProperties.includes(key) && obj[key] !== undefined) {
+                    td.contentEditable = true;
+                    td.addEventListener('blur', handleTableCellEdit);
+                    td.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.target.blur();
+                        }
+                    });
+                } else if (key !== 'actions') {
+                     td.style.color = '#9ca3af';
+                }
+            }
             row.appendChild(td);
         });
-        // Adiciona listener de duplo clique na linha para abrir o formulário de edição
-        row.addEventListener('dblclick', () => {
-            const currentData = objectsData.find(d => d.id === obj.id);
-            if (currentData) {
-                closeObjectsTable(); // Fecha o modal da tabela primeiro
-                openForm(currentData, currentData.type);
-            }
-        });
+
+        // REMOVIDO: Adiciona listener de duplo clique na linha para abrir o formulário de edição
+        // row.addEventListener('dblclick', () => {
+        //     const currentData = objectsData.find(d => d.id === obj.id);
+        //     if (currentData) {
+        //         closeObjectsTable(); // Fecha o modal da tabela primeiro
+        //         openForm(currentData, currentData.type);
+        //     }
+        // });
 
         tbody.appendChild(row);
     });
