@@ -1,15 +1,17 @@
 {
+  
   "name": "modular-build",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build-css": "tailwindcss -i ./src/input.css -o ./public/build.css --minify",
-    "build": "npm run build-css && npx wrangler deploy"
+    "build-css": "tailwindcss -i ./src/input.css -o ./public/css/build.css --minify",
+    "build": "npm run build-css"
   },
-  "dependencies": {
+  "devDependencies": {
     "@tailwindcss/cli": "^4.1.14",
-    "tailwindcss": "^4.1.14"
+    "tailwindcss": "^4.1.14",
+    "wrangler": "^4.42.0"
   }
 }
