@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Projeto 2D (Mobile)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="/src/output.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -55,7 +55,7 @@
     </div>
 
     <!-- Formulário Modal (Otimizado com w-11/12) -->
-    <div id="form-container" class="hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2">
+    <div id="form-container" class="hidden absolute inset-0 bg-black bg-opacity-60 items-center justify-center z-50 p-2">
         <div class="bg-gray-800 p-4 rounded-xl shadow-2xl w-11/12 max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto">
             <h2 id="form-title" class="text-xl font-bold mb-4">Configurar Objeto</h2>
             <form id="object-form" class="space-y-3">
@@ -171,7 +171,7 @@
     </div>
     
     <!-- Tabela Modal (Otimizada com w-11/12) -->
-    <div id="table-modal-container" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-2">
+    <div id="table-modal-container" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-2">
         <div class="bg-gray-800 p-2 rounded-xl shadow-2xl w-11/12 max-w-6xl border border-gray-700 flex flex-col h-[85vh]">
             <div class="flex justify-between items-center mb-2 p-2">
                 <h2 class="text-xl font-bold">Gerenciador</h2>

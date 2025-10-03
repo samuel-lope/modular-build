@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Projeto 2D Interativo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <link href="/src/output.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet" >
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-800 text-white font-sans overflow-hidden">
@@ -49,7 +49,7 @@
     </div>
 
     <!-- Formulário Modal -->
-    <div id="form-container" class="hidden absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10">
+    <div id="form-container" class="hidden absolute inset-0 bg-black bg-opacity-60 items-center justify-center z-10">
         <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-700">
             <h2 id="form-title" class="text-2xl font-bold mb-4">Configurar Objeto</h2>
             <form id="object-form" class="space-y-4">
@@ -168,7 +168,7 @@
     </div>
     
     <!-- Tabela Modal -->
-    <div id="table-modal-container" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+    <div id="table-modal-container" class="hidden absolute inset-0 bg-black bg-opacity-70 items-center justify-center z-50">
         <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-6xl border border-gray-700 flex flex-col">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-4">
