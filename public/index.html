@@ -126,8 +126,13 @@
 
                 <!-- Campos do Slider -->
                 <div id="slider-fields" class="hidden space-y-4">
+                    <!-- **NOVO**: Dropdown para herança de valor -->
                     <div>
-                        <label for="target-object" class="block text-sm font-medium text-gray-400">Objeto Alvo</label>
+                        <label for="inherit-slider" class="block text-sm font-medium text-gray-400">Herdar valor do Slider</label>
+                        <select id="inherit-slider" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3"></select>
+                    </div>
+                    <div class="pt-4 border-t border-gray-600">
+                        <label for="target-object" class="block text-sm font-medium text-gray-400">Controlar Objeto (Alvo)</label>
                         <select id="target-object" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3"></select>
                     </div>
                     <div>

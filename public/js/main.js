@@ -139,11 +139,29 @@ function checkAABBCollision(objA, objB) {
 }
 
 /**
+ * **NOVO**: Mapeia um valor de uma escala para outra.
+ * @param {number} value - O valor a ser mapeado.
+ * @param {number} fromMin - O mínimo da escala de origem.
+ * @param {number} fromMax - O máximo da escala de origem.
+ * @param {number} toMin - O mínimo da escala de destino.
+ * @param {number} toMax - O máximo da escala de destino.
+ * @returns {number} - O valor mapeado e arredondado.
+ */
+function mapValue(value, fromMin, fromMax, toMin, toMax) {
+    const fromRange = fromMax - fromMin;
+    if (fromRange === 0) return toMin; // Evita divisão por zero
+    const toRange = toMax - toMin;
+    const scaledValue = (value - fromMin) / fromRange;
+    return Math.round((scaledValue * toRange) + toMin);
+}
+
+/**
  * Loop principal da aplicação.
  */
 function gameLoop() {
     const collidableObjects = allObjects.filter(obj => ['retangulo', 'circulo', 'condicional'].includes(obj.type));
     const conditionalObjects = allObjects.filter(obj => obj.type === 'condicional');
+    const childSliders = allObjects.filter(obj => obj.type === 'slider' && obj.inheritedSliderId);
 
     // --- LÓGICA DE COLISÃO ---
     collidableObjects.forEach(obj => { obj.isColliding = false; });
@@ -169,6 +187,21 @@ function gameLoop() {
                 condObj.applyTransformation();
             } else {
                 condObj.resetTransformation();
+            }
+        }
+    });
+    
+    // **NOVO**: LÓGICA DE HERANÇA DE SLIDERS
+    childSliders.forEach(child => {
+        const parent = allObjects.find(obj => obj.id === child.inheritedSliderId);
+        if (parent && parent.type === 'slider') {
+            const parentValue = parseFloat(parent.sliderInput.value);
+            const mappedValue = mapValue(parentValue, parent.min, parent.max, child.min, child.max);
+
+            // Atualiza o valor do slider filho apenas se houver alteração
+            if (parseFloat(child.sliderInput.value) !== mappedValue) {
+                child.sliderInput.value = mappedValue;
+                child.handleSliderInput(); // Dispara a atualização do seu próprio alvo
             }
         }
     });
@@ -280,6 +313,9 @@ function openForm(config = null, type) {
     } 
     
     if (type === 'slider') {
+        // **NOVO**: Popula o dropdown de herança
+        populateInheritSliderDropdown(config ? config.id : objectIdInput.value, config ? config.inheritedSliderId : null);
+        
         populateTargetObjectDropdown(config ? config.targetId : null);
         if (config) {
             document.getElementById('target-property').value = config.targetProperty;
@@ -362,6 +398,8 @@ function getConfigFromForm() {
             targetProperty: document.getElementById('target-property').value,
             min: parseFloat(document.getElementById('min-value').value) || 0,
             max: parseFloat(document.getElementById('max-value').value) || 100,
+            // **NOVO**: Salva a configuração de herança
+            inheritedSliderId: document.getElementById('inherit-slider').value || null
         };
     } else if (type === 'grupo') {
         return commonConfig;
@@ -740,6 +778,29 @@ function populateSliderDropdown(currentId) {
         targetSelect.appendChild(option);
     });
 }
+
+/**
+ * **NOVO**: Popula o dropdown de herança de sliders.
+ * @param {string} currentSliderId - O ID do slider que está a ser editado.
+ * @param {string} inheritedId - O ID do slider pai que está atualmente selecionado.
+ */
+function populateInheritSliderDropdown(currentSliderId, inheritedId) {
+    const inheritSelect = document.getElementById('inherit-slider');
+    inheritSelect.innerHTML = '<option value="">Nenhum (Controle Manual)</option>';
+    const { objects: objectsData } = loadAppDataFromStorage();
+    const availableParents = objectsData.filter(obj => obj.type === 'slider' && obj.id !== currentSliderId);
+
+    availableParents.forEach(target => {
+        const option = document.createElement('option');
+        option.value = target.id;
+        option.textContent = `${target.nome || 'Slider sem nome'} (${target.id.substring(0, 8)})`;
+        if (target.id === inheritedId) {
+            option.selected = true;
+        }
+        inheritSelect.appendChild(option);
+    });
+}
+
 
 // --- INICIALIZAÇÃO E CRIAÇÃO DE INSTÂNCIAS ---
 

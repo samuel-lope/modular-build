@@ -58,9 +58,29 @@ export default class Slider extends Objeto2DBase {
         this.targetProperty = config.targetProperty;
         this.min = config.min;
         this.max = config.max;
+        
+        // **NOVO**: Propriedade para herança de valor
+        this.inheritedSliderId = config.inheritedSliderId || null;
 
         this.updateAppearance();
+        this.updateInputState(); // **NOVO**: Atualiza o estado do input (ativado/desativado)
     }
+    
+    /**
+     * **NOVO**: Ativa ou desativa o input do slider com base na herança.
+     */
+    updateInputState() {
+        if (this.inheritedSliderId) {
+            this.sliderInput.disabled = true;
+            this.elementoHTML.style.opacity = '0.7'; // Feedback visual de que está desativado
+            this.elementoHTML.title = `Valor herdado do slider ${this.inheritedSliderId}`;
+        } else {
+            this.sliderInput.disabled = false;
+            this.elementoHTML.style.opacity = '1';
+            this.elementoHTML.title = '';
+        }
+    }
+
 
     /**
      * Atualiza a aparência visual (posição, z-index, valores) do slider.
@@ -82,7 +102,9 @@ export default class Slider extends Objeto2DBase {
         this.sliderInput.max = this.max;
 
         const targetInstance = this.allObjectInstances.find(obj => obj.id === this.targetId);
-        if (targetInstance) {
+        
+        // Se não estiver herdando, busca o valor do seu objeto alvo para se posicionar
+        if (!this.inheritedSliderId && targetInstance) {
             let currentValue = targetInstance[this.targetProperty];
             // Converte rotação de radianos para graus para o slider
             if(this.targetProperty === 'rotation') {
@@ -90,11 +112,16 @@ export default class Slider extends Objeto2DBase {
             }
             this.sliderInput.value = currentValue;
             this.label.textContent = `${this.nome}: ${Math.round(currentValue)}`;
+        } else {
+            // Se estiver herdando, o valor é definido pelo gameLoop, aqui apenas exibimos.
+            this.label.textContent = `${this.nome}: ${Math.round(this.sliderInput.value)}`;
         }
     }
 
     /**
      * Lida com a alteração do valor do input do slider.
+     * Esta função é agora chamada tanto pela interação do utilizador (se não herdado)
+     * como programaticamente pelo gameLoop (se herdado).
      */
     handleSliderInput() {
         let newValue = parseFloat(this.sliderInput.value);
@@ -122,7 +149,6 @@ export default class Slider extends Objeto2DBase {
         if (updatedConfig) {
             targetInstance.update(updatedConfig);
 
-            // Se o alvo for um grupo, precisamos salvar o estado de seus filhos também
             if (targetInstance.type === 'grupo') {
                 const groupData = JSON.parse(localStorage.getItem(this.storageKey)) || { theme: {}, objects: [] };
                 groupData.objects = groupData.objects.map(d => {
