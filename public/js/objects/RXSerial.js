@@ -21,12 +21,19 @@ export default class RXSerial extends Objeto2DBase {
         this.port = null;
         this.reader = null;
         this.isReading = false;
-        this.keepReading = true; // Flag para controlar o loop de leitura
+        this.keepReading = true;
+        this.readingLoopPromise = null; // Para aguardar a finalização do loop de leitura
 
         // Propriedades de exibição
         this.status = 'Desconectado';
         this.lastValue = 'N/A';
         this.portInfo = 'Nenhuma';
+        
+        // Ícones para o botão de conexão
+        this.icons = {
+            connect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M10 12H2"/><path d="m7 9-3 3 3 3"/></svg>`,
+            disconnect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M22 12H10"/><path d="m13 9 3 3-3 3"/></svg>`
+        };
 
         // Dimensões fixas
         this.largura = 220;
@@ -40,20 +47,31 @@ export default class RXSerial extends Objeto2DBase {
      * Cria os elementos visuais do objeto no DOM.
      */
     criarElemento() {
-        super.criarElemento(); // Cria o container draggable base
+        super.criarElemento(); 
         this.elementoHTML.classList.add('object-slider', 'p-4', 'flex', 'flex-col', 'justify-between');
-        this.elementoHTML.style.border = '1px solid #67e8f9'; // Borda ciano
+        this.elementoHTML.style.border = '1px solid #67e8f9';
         
         this.elementoHTML.innerHTML = `
-            <div class="flex justify-between items-center border-b border-gray-600 pb-1">
-                <span class="font-bold text-base text-cyan-400">RX-Serial</span>
-                <span id="status-${this.id}" class="px-2 py-0.5 text-xs rounded-full bg-red-600 text-white">Desconectado</span>
+            <div class="flex justify-between items-start border-b border-gray-600 pb-1">
+                <div>
+                    <span class="font-bold text-base text-cyan-400">RX-Serial</span>
+                    <span id="status-${this.id}" class="px-2 py-0.5 text-xs rounded-full bg-red-600 text-white">Desconectado</span>
+                </div>
+                <button id="toggle-connect-btn-${this.id}" title="Conectar" class="p-1 rounded-md hover:bg-gray-600 transition-colors">
+                    ${this.icons.connect}
+                </button>
             </div>
             <div class="mt-2 text-sm">
                 <p>Porta: <span id="port-${this.id}" class="font-mono text-gray-300">Nenhuma</span></p>
                 <p>Valor: <span id="value-${this.id}" class="font-mono text-lg font-bold text-white">N/A</span></p>
             </div>
         `;
+        
+        this.connectBtn = this.elementoHTML.querySelector(`#toggle-connect-btn-${this.id}`);
+        this.connectBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Impede que o duplo clique para abrir o formulário seja acionado
+            this.toggleConnection();
+        });
     }
 
     /**
@@ -84,6 +102,7 @@ export default class RXSerial extends Objeto2DBase {
         const statusEl = this.elementoHTML.querySelector(`#status-${this.id}`);
         const portEl = this.elementoHTML.querySelector(`#port-${this.id}`);
         const valueEl = this.elementoHTML.querySelector(`#value-${this.id}`);
+        const connectBtn = this.elementoHTML.querySelector(`#toggle-connect-btn-${this.id}`);
 
         statusEl.textContent = this.status;
         portEl.textContent = this.portInfo;
@@ -92,12 +111,27 @@ export default class RXSerial extends Objeto2DBase {
         if (this.status === 'Conectado') {
             statusEl.classList.remove('bg-red-600');
             statusEl.classList.add('bg-green-600');
+            connectBtn.innerHTML = this.icons.disconnect;
+            connectBtn.title = 'Desconectar';
         } else {
             statusEl.classList.remove('bg-green-600');
             statusEl.classList.add('bg-red-600');
+            connectBtn.innerHTML = this.icons.connect;
+            connectBtn.title = 'Conectar';
         }
     }
     
+    /**
+     * Alterna entre conectar e desconectar da porta serial.
+     */
+    toggleConnection() {
+        if (this.port) {
+            this.disconnect();
+        } else {
+            this.connect();
+        }
+    }
+
     /**
      * Solicita permissão ao utilizador e abre a porta serial.
      */
@@ -105,10 +139,6 @@ export default class RXSerial extends Objeto2DBase {
         if (!('serial' in navigator)) {
             alert('A Web Serial API não é suportada neste navegador. Tente usar o Chrome ou Edge.');
             return;
-        }
-        
-        if (this.port) {
-             await this.disconnect();
         }
 
         try {
@@ -118,8 +148,8 @@ export default class RXSerial extends Objeto2DBase {
             this.status = 'Conectado';
             const portInfo = this.port.getInfo();
             this.portInfo = `VID:${portInfo.usbVendorId} PID:${portInfo.usbProductId}`;
-            this.keepReading = true; // Reseta a flag
-            this.readLoop(); // Inicia o loop de leitura
+            this.keepReading = true;
+            this.readingLoopPromise = this.readLoop();
             
         } catch (error) {
             this.status = 'Erro';
@@ -130,19 +160,25 @@ export default class RXSerial extends Objeto2DBase {
     }
 
     /**
-     * Fecha a porta serial e interrompe a leitura.
+     * Fecha a porta serial e interrompe a leitura de forma robusta.
      */
     async disconnect() {
-        this.keepReading = false; // Sinaliza para o loop parar
-        
+        if (!this.port) return;
+
+        this.keepReading = false;
+
         if (this.reader) {
             try {
                 await this.reader.cancel();
             } catch (error) {
-                // Ignorar erro se o cancelamento falhar
+                // Erro esperado, pois cancelar interrompe a leitura
             }
         }
-
+        
+        if (this.readingLoopPromise) {
+            await this.readingLoopPromise;
+        }
+        
         if (this.port && this.port.readable) {
             await this.port.close().catch(() => {});
         }
@@ -150,6 +186,7 @@ export default class RXSerial extends Objeto2DBase {
         this.port = null;
         this.reader = null;
         this.isReading = false;
+        this.readingLoopPromise = null;
         this.status = 'Desconectado';
         this.portInfo = 'Nenhuma';
         this.updateAppearance();
@@ -159,7 +196,7 @@ export default class RXSerial extends Objeto2DBase {
      * Loop de leitura contínua da porta serial.
      */
     async readLoop() {
-        if (!this.port || !this.port.readable || this.isReading) return;
+        if (!this.port || !this.port.readable) return;
         this.isReading = true;
         
         const textDecoder = new TextDecoderStream();
@@ -171,6 +208,7 @@ export default class RXSerial extends Objeto2DBase {
             while (this.keepReading) {
                 const { value, done } = await this.reader.read();
                 if (done) {
+                    this.keepReading = false;
                     break;
                 }
                 
@@ -191,15 +229,16 @@ export default class RXSerial extends Objeto2DBase {
                 }
             }
         } catch (error) {
-            console.error('Erro durante a leitura da serial:', error);
-            this.status = 'Erro de Leitura';
+            if (this.keepReading) {
+                console.error('Erro de leitura Serial:', error);
+                this.status = 'Erro';
+            }
         } finally {
-            this.reader.releaseLock();
+            if (this.reader) {
+                this.reader.releaseLock();
+            }
             await readableStreamClosed.catch(() => {});
             this.isReading = false;
-            if (this.keepReading) {
-                 this.disconnect();
-            }
         }
     }
 

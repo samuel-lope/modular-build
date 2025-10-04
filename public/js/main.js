@@ -311,20 +311,6 @@ function openForm(config = null, type) {
         } else {
             document.getElementById('object-name').value = 'RX Serial';
         }
-
-        const connectBtn = document.getElementById('connect-serial-btn');
-        // A instância pode não existir se estivermos a criar um novo objeto
-        const instanceId = config ? config.id : objectIdInput.value;
-        
-        connectBtn.onclick = () => {
-            const rxSerialInstance = allObjects.find(obj => obj.id === instanceId);
-            if (rxSerialInstance) {
-                rxSerialInstance.baudRate = parseInt(document.getElementById('baud-rate').value, 10);
-                rxSerialInstance.connect();
-            } else {
-                alert("Instância do objeto RX-Serial não encontrada. Salve o objeto primeiro e edite-o para conectar.");
-            }
-        };
     }
 
     formContainer.classList.remove('hidden');
