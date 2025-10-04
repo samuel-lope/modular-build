@@ -29,11 +29,8 @@ export default class RXSerial extends Objeto2DBase {
         this.lastValue = 'N/A';
         this.portInfo = 'Nenhuma';
         
-        // Ícones para o botão de conexão
-        this.icons = {
-            connect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M10 12H2"/><path d="m7 9-3 3 3 3"/></svg>`,
-            disconnect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M22 12H10"/><path d="m13 9 3 3-3 3"/></svg>`
-        };
+        // Ícone para o botão de conexão
+        this.iconConnect = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M10 12H2"/><path d="m7 9-3 3 3 3"/></svg>`;
 
         // Dimensões fixas
         this.largura = 220;
@@ -57,8 +54,8 @@ export default class RXSerial extends Objeto2DBase {
                     <span class="font-bold text-base text-cyan-400">RX-Serial</span>
                     <span id="status-${this.id}" class="px-2 py-0.5 text-xs rounded-full bg-red-600 text-white">Desconectado</span>
                 </div>
-                <button id="toggle-connect-btn-${this.id}" title="Conectar" class="p-1 rounded-md hover:bg-gray-600 transition-colors">
-                    ${this.icons.connect}
+                <button id="connect-btn-${this.id}" title="Conectar" class="p-1 rounded-md hover:bg-gray-600 transition-colors">
+                    ${this.iconConnect}
                 </button>
             </div>
             <div class="mt-2 text-sm">
@@ -67,10 +64,10 @@ export default class RXSerial extends Objeto2DBase {
             </div>
         `;
         
-        this.connectBtn = this.elementoHTML.querySelector(`#toggle-connect-btn-${this.id}`);
+        this.connectBtn = this.elementoHTML.querySelector(`#connect-btn-${this.id}`);
         this.connectBtn.addEventListener('click', (e) => {
             e.stopPropagation(); // Impede que o duplo clique para abrir o formulário seja acionado
-            this.toggleConnection();
+            this.connect();
         });
     }
 
@@ -102,7 +99,7 @@ export default class RXSerial extends Objeto2DBase {
         const statusEl = this.elementoHTML.querySelector(`#status-${this.id}`);
         const portEl = this.elementoHTML.querySelector(`#port-${this.id}`);
         const valueEl = this.elementoHTML.querySelector(`#value-${this.id}`);
-        const connectBtn = this.elementoHTML.querySelector(`#toggle-connect-btn-${this.id}`);
+        const connectBtn = this.elementoHTML.querySelector(`#connect-btn-${this.id}`);
 
         statusEl.textContent = this.status;
         portEl.textContent = this.portInfo;
@@ -111,27 +108,14 @@ export default class RXSerial extends Objeto2DBase {
         if (this.status === 'Conectado') {
             statusEl.classList.remove('bg-red-600');
             statusEl.classList.add('bg-green-600');
-            connectBtn.innerHTML = this.icons.disconnect;
-            connectBtn.title = 'Desconectar';
+            connectBtn.style.display = 'none'; // Esconde o botão quando conectado
         } else {
             statusEl.classList.remove('bg-green-600');
             statusEl.classList.add('bg-red-600');
-            connectBtn.innerHTML = this.icons.connect;
-            connectBtn.title = 'Conectar';
+            connectBtn.style.display = 'block'; // Mostra o botão quando desconectado
         }
     }
     
-    /**
-     * Alterna entre conectar e desconectar da porta serial.
-     */
-    toggleConnection() {
-        if (this.port) {
-            this.disconnect();
-        } else {
-            this.connect();
-        }
-    }
-
     /**
      * Solicita permissão ao utilizador e abre a porta serial.
      */
@@ -140,6 +124,9 @@ export default class RXSerial extends Objeto2DBase {
             alert('A Web Serial API não é suportada neste navegador. Tente usar o Chrome ou Edge.');
             return;
         }
+
+        // Se já estiver conectado ou tentando conectar, não faz nada.
+        if (this.port) return;
 
         try {
             this.port = await navigator.serial.requestPort();
@@ -155,6 +142,7 @@ export default class RXSerial extends Objeto2DBase {
             this.status = 'Erro';
             this.portInfo = 'Falha ao conectar';
             console.error('Erro ao conectar à porta serial:', error);
+            this.port = null; // Garante que o estado de "desconectado" seja mantido em caso de falha
         }
         this.updateAppearance();
     }
