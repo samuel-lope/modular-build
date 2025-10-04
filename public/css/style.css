@@ -27,7 +27,7 @@ body {
 }
 
 .object-slider {
-    background-color: rgba(17, 24, 39, 0.8); /* gray-900 com opacidade */
+    background-color: rgba(13, 20, 22, 0.8); /* gray-900 com opacidade */
     backdrop-filter: blur(4px);
     padding: 8px;
     border-radius: 8px;
