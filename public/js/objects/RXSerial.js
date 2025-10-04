@@ -33,7 +33,7 @@ export default class RXSerial extends Objeto2DBase {
         this.iconConnect = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M10 12H2"/><path d="m7 9-3 3 3 3"/></svg>`;
 
         // Dimensões fixas
-        this.largura = 220;
+        this.largura = 250;
         this.altura = 100;
 
         this.criarElemento();

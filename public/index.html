@@ -48,10 +48,13 @@
         </div>
     </div>
 
-    <!-- Formulário Modal -->
-    <div id="form-container" class="hidden absolute inset-0 bg-black bg-opacity-60 items-center justify-center z-10">
-        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto">
-            <h2 id="form-title" class="text-2xl font-bold mb-4">Configurar Objeto</h2>
+    <!-- Formulário Modal (CORREÇÃO: Removidas as classes de visibilidade e layout) -->
+    <div id="form-container" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center z-50 p-4">
+        <div id="form-panel" class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto">
+            <div class="mb-6">
+                <h2 id="form-title" class="text-2xl font-bold">Configurar Objeto</h2>
+                <p class="text-gray-400 mt-1">Ajuste as propriedades do objeto abaixo.</p>
+            </div>
             <form id="object-form" class="space-y-4">
                 <input type="hidden" id="object-id">
                 <input type="hidden" id="object-type">
@@ -126,7 +129,6 @@
 
                 <!-- Campos do Slider -->
                 <div id="slider-fields" class="hidden space-y-4">
-                    <!-- **NOVO**: Dropdown para herança de valor -->
                     <div>
                         <label for="inherit-slider" class="block text-sm font-medium text-gray-400">Herdar valor do Slider</label>
                         <select id="inherit-slider" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3"></select>
@@ -220,30 +222,30 @@
                 </div>
 
                 <!-- Botões de Ação -->
-                <div class="flex justify-between items-center pt-4">
+                <div class="flex justify-between items-center pt-6 mt-2 border-t border-gray-700">
                     <div>
-                        <button type="button" id="delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md font-medium">Excluir</button>
+                        <button type="button" id="delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors">Excluir</button>
                     </div>
-                    <div>
-                        <button type="button" id="cancel-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md font-medium mr-2">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium">Salvar</button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="cancel-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold transition-colors">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors">Salvar</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
     
-    <!-- Tabela Modal -->
-    <div id="table-modal-container" class="hidden absolute inset-0 bg-black bg-opacity-70 items-center justify-center z-50">
-        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-6xl border border-gray-700 flex flex-col">
+    <!-- Tabela Modal (CORREÇÃO: Removidas as classes de visibilidade e layout) -->
+    <div id="table-modal-container" class="fixed inset-0 bg-black bg-opacity-60 items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-6xl border border-gray-700 flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-4">
                     <h2 class="text-2xl font-bold">Gerenciador de Objetos</h2>
-                    <button id="group-selected-btn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md font-medium disabled:bg-gray-500 disabled:cursor-not-allowed">Agrupar Selecionados</button>
+                    <button id="group-selected-btn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed">Agrupar</button>
                 </div>
                 <button id="close-table-btn" class="text-gray-400 hover:text-white text-3xl font-bold">&times;</button>
             </div>
-            <div class="overflow-auto max-h-[70vh]">
+            <div class="overflow-auto flex-grow">
                 <table id="objects-table" class="w-full text-sm text-left table-auto">
                     <thead class="text-xs text-gray-400 uppercase bg-gray-700 sticky top-0">
                         <tr>

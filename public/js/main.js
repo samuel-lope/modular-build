@@ -139,7 +139,7 @@ function checkAABBCollision(objA, objB) {
 }
 
 /**
- * **NOVO**: Mapeia um valor de uma escala para outra.
+ * Mapeia um valor de uma escala para outra.
  * @param {number} value - O valor a ser mapeado.
  * @param {number} fromMin - O mínimo da escala de origem.
  * @param {number} fromMax - O máximo da escala de origem.
@@ -191,17 +191,16 @@ function gameLoop() {
         }
     });
     
-    // **NOVO**: LÓGICA DE HERANÇA DE SLIDERS
+    // LÓGICA DE HERANÇA DE SLIDERS
     childSliders.forEach(child => {
         const parent = allObjects.find(obj => obj.id === child.inheritedSliderId);
         if (parent && parent.type === 'slider') {
             const parentValue = parseFloat(parent.sliderInput.value);
             const mappedValue = mapValue(parentValue, parent.min, parent.max, child.min, child.max);
 
-            // Atualiza o valor do slider filho apenas se houver alteração
             if (parseFloat(child.sliderInput.value) !== mappedValue) {
                 child.sliderInput.value = mappedValue;
-                child.handleSliderInput(); // Dispara a atualização do seu próprio alvo
+                child.handleSliderInput();
             }
         }
     });
@@ -313,7 +312,6 @@ function openForm(config = null, type) {
     } 
     
     if (type === 'slider') {
-        // **NOVO**: Popula o dropdown de herança
         populateInheritSliderDropdown(config ? config.id : objectIdInput.value, config ? config.inheritedSliderId : null);
         
         populateTargetObjectDropdown(config ? config.targetId : null);
@@ -349,12 +347,14 @@ function openForm(config = null, type) {
         }
     }
 
-    formContainer.classList.remove('hidden');
+    // CORREÇÃO: Usa a classe 'is-open' para exibir e animar
+    formContainer.classList.add('is-open');
 }
 
 
 function closeForm() {
-    formContainer.classList.add('hidden');
+    // CORREÇÃO: Remove a classe 'is-open' para esconder
+    formContainer.classList.remove('is-open');
 }
 
 function getConfigFromForm() {
@@ -398,7 +398,6 @@ function getConfigFromForm() {
             targetProperty: document.getElementById('target-property').value,
             min: parseFloat(document.getElementById('min-value').value) || 0,
             max: parseFloat(document.getElementById('max-value').value) || 100,
-            // **NOVO**: Salva a configuração de herança
             inheritedSliderId: document.getElementById('inherit-slider').value || null
         };
     } else if (type === 'grupo') {
@@ -617,11 +616,13 @@ function openObjectsTable() {
 
     groupBtn.addEventListener('click', handleGroupObjects);
 
-    tableModalContainer.classList.remove('hidden');
+    // CORREÇÃO: Usa a classe 'is-open' para exibir e animar
+    tableModalContainer.classList.add('is-open');
 }
 
 function closeObjectsTable() {
-    tableModalContainer.classList.add('hidden');
+    // CORREÇÃO: Remove a classe 'is-open' para esconder
+    tableModalContainer.classList.remove('is-open');
 }
 
 function handleTableCellEdit(event) {
@@ -779,11 +780,6 @@ function populateSliderDropdown(currentId) {
     });
 }
 
-/**
- * **NOVO**: Popula o dropdown de herança de sliders.
- * @param {string} currentSliderId - O ID do slider que está a ser editado.
- * @param {string} inheritedId - O ID do slider pai que está atualmente selecionado.
- */
 function populateInheritSliderDropdown(currentSliderId, inheritedId) {
     const inheritSelect = document.getElementById('inherit-slider');
     inheritSelect.innerHTML = '<option value="">Nenhum (Controle Manual)</option>';

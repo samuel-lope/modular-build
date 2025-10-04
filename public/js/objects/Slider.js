@@ -19,7 +19,7 @@ export default class Slider extends Objeto2DBase {
         this.label = null;
         
         // Dimensões fixas para o slider
-        this.largura = 300;
+        this.largura = 250;
         this.altura = 50;
 
         this.criarElemento();

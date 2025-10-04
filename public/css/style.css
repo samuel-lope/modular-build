@@ -123,3 +123,37 @@ body {
     border-radius: 4px;
 }
 
+/* CORREÇÃO: Animações do Modal com classe de estado */
+#form-container, #table-modal-container {
+    display: none; /* Escondido por padrão */
+    opacity: 0;
+}
+
+/* Estado ativo: aplica flex para centralizar e inicia a animação */
+#form-container.is-open, #table-modal-container.is-open {
+    display: flex;
+    animation: modal-fade-in 0.3s ease-out forwards;
+}
+
+/* O painel interno também anima */
+.is-open #form-panel, .is-open #table-modal-container > div {
+    animation: form-panel-zoom 0.3s ease-out forwards;
+}
+
+
+@keyframes modal-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes form-panel-zoom {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
