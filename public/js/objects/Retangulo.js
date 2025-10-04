@@ -63,7 +63,7 @@ export default class Retangulo extends Objeto2DBase {
         this.elementoHTML.style.width = `${this.largura}px`;
         this.elementoHTML.style.height = `${this.altura}px`;
         
-        this.elementoHTML.style.transformOrigin = '50% 50%';
+        this.elementoHTML.style.transformOrigin = '50% 50%'; // Rotation Point of the Rectangle
         this.elementoHTML.style.transform = `rotate(${this.rotation}rad)`;
         
         const corAtual = this.isColliding 

@@ -213,7 +213,7 @@ function gameLoop() {
 
 function populateTargetObjectDropdown(currentId) {
     const targetObjectSelect = document.getElementById('target-object');
-    targetObjectSelect.innerHTML = '';
+    targetObjectSelect.innerHTML = '<option value="">Nenhum</option>';
     
     const { objects: objectsData } = loadAppDataFromStorage();
     const availableTargets = objectsData.filter(obj => ['retangulo', 'circulo', 'grupo', 'condicional'].includes(obj.type));
@@ -221,7 +221,7 @@ function populateTargetObjectDropdown(currentId) {
     availableTargets.forEach(target => {
         const option = document.createElement('option');
         option.value = target.id;
-        option.textContent = `${target.nome || 'Sem nome'} (${target.id.substring(0, 8)})`;
+        option.textContent = `${target.nome || 'Sem nome'} (${target.id.substring(0, 3)})`;
         if (target.id === currentId) {
             option.selected = true;
         }
@@ -772,7 +772,7 @@ function populateSliderDropdown(currentId) {
     availableSliders.forEach(target => {
         const option = document.createElement('option');
         option.value = target.id;
-        option.textContent = `${target.nome || 'Slider sem nome'} (${target.id.substring(0, 8)})`;
+        option.textContent = `${target.nome || 'Slider sem nome'} (${target.id.substring(0, 3)})`;
         if (target.id === currentId) {
             option.selected = true;
         }
@@ -789,7 +789,7 @@ function populateInheritSliderDropdown(currentSliderId, inheritedId) {
     availableParents.forEach(target => {
         const option = document.createElement('option');
         option.value = target.id;
-        option.textContent = `${target.nome || 'Slider sem nome'} (${target.id.substring(0, 8)})`;
+        option.textContent = `${target.nome || 'Slider sem nome'} (${target.id.substring(0, 3)})`;
         if (target.id === inheritedId) {
             option.selected = true;
         }
