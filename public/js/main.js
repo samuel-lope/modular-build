@@ -3,6 +3,7 @@ import Circulo from './objects/Circulo.js';
 import Slider from './objects/Slider.js';
 import Grupo from './objects/Grupo.js';
 import Condicional from './objects/Condicional.js';
+import RXSerial from './objects/RXSerial.js';
 
 // --- REGISTRO DE TIPOS DE OBJETO ---
 const objectTypeRegistry = {
@@ -26,6 +27,13 @@ const objectTypeRegistry = {
         buttonClass: 'bg-yellow-500 hover:bg-yellow-600',
         formFieldsId: 'conditional-fields',
         commonFieldsId: 'shape-common-fields'
+    },
+    'rx-serial': {
+        class: RXSerial,
+        displayName: 'RX-Serial',
+        buttonClass: 'bg-cyan-600 hover:bg-cyan-700',
+        formFieldsId: 'rx-serial-fields',
+        commonFieldsId: null
     },
     'slider': {
         class: Slider,
@@ -71,7 +79,6 @@ const closeTableBtn = document.getElementById('close-table-btn');
 const objectsTable = document.getElementById('objects-table');
 
 // --- ESTADO DA APLICAÇÃO ---
-let isCollisionDetectionActive = true;
 const allObjects = []; // Array para armazenar as instâncias dos objetos
 const STORAGE_KEY = 'interactive_2d_app_data_v1';
 const DEFAULT_THEME = { backgroundColor: '#374151' };
@@ -81,6 +88,7 @@ const objectIcons = {
     retangulo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect></svg>`,
     circulo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle></svg>`,
     condicional: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 12l10 10 10-10L12 2z"></path></svg>`,
+    'rx-serial': `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8V5c0-1.1-.9-2-2-2H4a2 2 0 00-2 2v14c0 1.1.9 2 2 2h12a2 2 0 002-2v-3"/><path d="M10 12H2"/><path d="m7 9-3 3 3 3"/><path d="M22 12h-6"/><path d="m19 9 3 3-3 3"/></svg>`,
     slider: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><circle cx="8" cy="9" r="2"></circle><circle cx="16" cy="15" r="2"></circle></svg>`,
     manage: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`
 };
@@ -115,7 +123,7 @@ function saveAppDataToStorage(appData) {
  * Verifica a colisão entre dois objetos (AABB).
  */
 function checkAABBCollision(objA, objB) {
-    if (objA.type === 'slider' || objB.type === 'slider') return false; 
+    if (objA.type === 'slider' || objB.type === 'slider' || objA.type === 'rx-serial' || objB.type === 'rx-serial') return false; 
     
     const larguraA = objA.largura || objA.diametro;
     const alturaA = objA.altura || objA.diametro;
@@ -138,39 +146,36 @@ function gameLoop() {
     const conditionalObjects = allObjects.filter(obj => obj.type === 'condicional');
 
     // --- LÓGICA DE COLISÃO ---
-    if (isCollisionDetectionActive) {
-        collidableObjects.forEach(obj => { obj.isColliding = false; });
+    collidableObjects.forEach(obj => { obj.isColliding = false; });
 
-        for (let i = 0; i < collidableObjects.length; i++) {
-            for (let j = i + 1; j < collidableObjects.length; j++) {
-                const objA = collidableObjects[i];
-                const objB = collidableObjects[j];
+    for (let i = 0; i < collidableObjects.length; i++) {
+        for (let j = i + 1; j < collidableObjects.length; j++) {
+            const objA = collidableObjects[i];
+            const objB = collidableObjects[j];
 
-                if (checkAABBCollision(objA, objB)) {
-                    if (objA.reactsToCollision) objA.isColliding = true;
-                    if (objB.reactsToCollision) objB.isColliding = true;
-                }
+            if (checkAABBCollision(objA, objB)) {
+                if (objA.reactsToCollision) objA.isColliding = true;
+                if (objB.reactsToCollision) objB.isColliding = true;
             }
         }
-        collidableObjects.forEach(obj => { obj.updateAppearance(); });
     }
-
+    collidableObjects.forEach(obj => { obj.updateAppearance(); });
+    
     // --- LÓGICA CONDICIONAL ---
-    if (conditionalObjects.length > 0) {
-        conditionalObjects.forEach(condObj => {
-            const targetObject = allObjects.find(obj => obj.id === condObj.conditionTargetId);
-            if (targetObject) {
-                if (condObj.checkCondition(targetObject)) {
-                    condObj.applyTransformation();
-                } else {
-                    condObj.resetTransformation();
-                }
+    conditionalObjects.forEach(condObj => {
+        const targetObject = allObjects.find(obj => obj.id === condObj.conditionTargetId);
+        if (targetObject) {
+            if (condObj.checkCondition(targetObject)) {
+                condObj.applyTransformation();
+            } else {
+                condObj.resetTransformation();
             }
-        });
-    }
+        }
+    });
 
     requestAnimationFrame(gameLoop);
 }
+
 
 // --- LÓGICA DO FORMULÁRIO ---
 
@@ -296,9 +301,31 @@ function openForm(config = null, type) {
             document.getElementById('object-name').value = 'Novo Condicional';
         }
         updateTransformationValueFields(config ? config.transformationType : 'changeColor', config ? config.transformationValue : null);
+        document.getElementById('transformation-type').onchange = (e) => updateTransformationValueFields(e.target.value, null);
     }
 
-    document.getElementById('transformation-type').onchange = (e) => updateTransformationValueFields(e.target.value, null);
+    if (type === 'rx-serial') {
+        populateSliderDropdown(config ? config.targetSliderId : null);
+        if (config) {
+            document.getElementById('baud-rate').value = config.baudRate || 9600;
+        } else {
+            document.getElementById('object-name').value = 'RX Serial';
+        }
+
+        const connectBtn = document.getElementById('connect-serial-btn');
+        // A instância pode não existir se estivermos a criar um novo objeto
+        const instanceId = config ? config.id : objectIdInput.value;
+        
+        connectBtn.onclick = () => {
+            const rxSerialInstance = allObjects.find(obj => obj.id === instanceId);
+            if (rxSerialInstance) {
+                rxSerialInstance.baudRate = parseInt(document.getElementById('baud-rate').value, 10);
+                rxSerialInstance.connect();
+            } else {
+                alert("Instância do objeto RX-Serial não encontrada. Salve o objeto primeiro e edite-o para conectar.");
+            }
+        };
+    }
 
     formContainer.classList.remove('hidden');
 }
@@ -370,13 +397,18 @@ function getConfigFromForm() {
             largura: parseInt(document.getElementById('largura').value, 10) || 100,
             altura: parseInt(document.getElementById('altura').value, 10) || 50,
             rotation: (parseFloat(document.getElementById('rotation').value) || 0) * (Math.PI / 180),
-            // Lógica Condicional
             conditionTargetId: document.getElementById('condition-target').value,
             conditionProperty: document.getElementById('condition-property').value,
             conditionOperator: document.getElementById('condition-operator').value,
             conditionValue: parseFloat(document.getElementById('condition-value').value) || 0,
             transformationType: transformationType,
             transformationValue: transformationValue
+        };
+    } else if (type === 'rx-serial') {
+        return {
+            ...commonConfig,
+            targetSliderId: document.getElementById('target-slider').value,
+            baudRate: parseInt(document.getElementById('baud-rate').value, 10) || 9600
         };
     }
 }
@@ -417,6 +449,11 @@ function handleFormSubmit(event) {
 }
 
 function deleteObjectById(idToDelete, typeToDelete) {
+    const instance = allObjects.find(obj => obj.id === idToDelete);
+    if (instance && instance.destroy) {
+        instance.destroy();
+    }
+    
     const appData = loadAppDataFromStorage();
 
     if (typeToDelete === 'grupo') {
@@ -656,7 +693,7 @@ function populateConditionalTargetDropdown(currentId) {
     const targetSelect = document.getElementById('condition-target');
     targetSelect.innerHTML = '';
     const { objects: objectsData } = loadAppDataFromStorage();
-    const availableTargets = objectsData.filter(obj => obj.type !== 'slider' && obj.type !== 'condicional');
+    const availableTargets = objectsData.filter(obj => obj.type !== 'slider' && obj.type !== 'condicional' && obj.type !== 'rx-serial');
 
     availableTargets.forEach(target => {
         const option = document.createElement('option');
@@ -696,6 +733,27 @@ function updateTransformationValueFields(type, value) {
     }
 }
 
+function populateSliderDropdown(currentId) {
+    const targetSelect = document.getElementById('target-slider');
+    targetSelect.innerHTML = '';
+    const { objects: objectsData } = loadAppDataFromStorage();
+    const availableSliders = objectsData.filter(obj => obj.type === 'slider');
+
+    if (availableSliders.length === 0) {
+        targetSelect.innerHTML = '<option value="">Nenhum slider na cena</option>';
+        return;
+    }
+
+    availableSliders.forEach(target => {
+        const option = document.createElement('option');
+        option.value = target.id;
+        option.textContent = `${target.nome || 'Slider sem nome'} (${target.id.substring(0, 8)})`;
+        if (target.id === currentId) {
+            option.selected = true;
+        }
+        targetSelect.appendChild(option);
+    });
+}
 
 // --- INICIALIZAÇÃO E CRIAÇÃO DE INSTÂNCIAS ---
 
@@ -708,6 +766,7 @@ function createObjectInstance(config) {
     
     switch (config.type) {
         case 'slider':
+        case 'rx-serial':
             newObject = new ObjectClass(scene, config, allObjects, openForm, STORAGE_KEY);
             break;
         
@@ -816,6 +875,9 @@ function init() {
 
     clearSceneBtn.addEventListener('click', () => {
         if (confirm('Tem certeza que deseja limpar todos os objetos da cena? Esta ação não pode ser desfeita.')) {
+            allObjects.forEach(obj => {
+                if(obj.destroy) obj.destroy();
+            });
             const appData = loadAppDataFromStorage();
             appData.objects = [];
             saveAppDataToStorage(appData);
